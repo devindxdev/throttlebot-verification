@@ -190,7 +190,7 @@ module.exports = {
 		const preApprovalButtonCollector = interaction.channel.createMessageComponentCollector({
 			filter: preApprovalButtonFilter,
 			max: 1,
-			time: 10000
+			time: 60000
 		});
 
 		preApprovalButtonCollector.on('end', async (collected) => {
