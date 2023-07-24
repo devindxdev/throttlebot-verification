@@ -10,6 +10,8 @@ The bot utilizes Discord's latest API version V9 to provide you with the latest 
 + Slash commands for a powerful and interactive experience.
 + Syncing across different servers. (beta)
 
+Featured in the [AR12Gaming](https://discord.gg/ar12) server and the biggest automotive discord, [The Car Community](https://discord.gg/cars) along with many others.
+
 ## Getting Started
 1. Invite ThrottleBot Verification (hosted by us) to your server.
 - Recommended Link: [Click here](https://discord.com/api/oauth2/authorize?client_id=851411747641884712&permissions=157035129920&scope=bot%20applications.commands) 
