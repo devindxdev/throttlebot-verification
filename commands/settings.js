@@ -23,6 +23,12 @@ module.exports = {
 		const guildId = interaction.guild.id;
 		const guildName = interaction.guild.name;
 		const guildIcon = interaction.guild.iconURL({ dynamic: true });
+		const guildBoostLevel = interaction.guild.premiumTier;
+		/*
+			TIER_2 = 7 boosts atleast (50mb uploads)
+			TIER_3 = 14 boosts atleast (100mb uploads)	
+		*/
+
 		//Guild Profile
 		async function settingsSetup(){
 			const guildProfile = await obtainGuildProfile(guildId);
@@ -363,7 +369,58 @@ module.exports = {
 													return imagesOption();	
 												};
 
-												if(attachmentSize > 8000000){
+												if(guildBoostLevel === 'TIER_3'){
+													//err, attachment too big
+													//check if they are patreon, if not then show err and return
+													if(![1,2,3,4].includes(premiumTier) && !premiumUser){
+														if(attachmentSize > 8000000){
+															const {advertEmbed, buttonsRow} = patreonAdvertEmbed(initiatorAvatar, 'Patreon Exclusive Feature', 'Only 8mb and below images are allowed by default, join our patreon to upload bigger images!', footerIcon, footerText)
+															await interaction.editReply({
+																embeds: [advertEmbed],
+																components: [buttonsRow],
+																ephemeral: true
+															});
+															await wait(10000)
+
+															return imagesOption();
+														};
+													}else{
+														if(attachmentSize > 100000000){
+														await interaction.editReply({
+															embeds: [errorEmbed('The attachment you provided is too big, it must be under `100mb`\nGoing back to main menu in 5s...', initiatorAvatar)],
+															components: []
+														});
+														await wait(5000)
+														return imagesOption();
+													};
+													};
+													
+
+												}else if(guildBoostLevel === 'TIER_2'){
+													//err, attachment too big
+													if(![1,2,3,4].includes(premiumTier) && !premiumUser){
+														if(attachmentSize > 8000000){
+															const {advertEmbed, buttonsRow} = patreonAdvertEmbed(initiatorAvatar, 'Patreon Exclusive Feature', 'Only 8mb and below images are allowed by default, join our patreon to upload bigger images!', footerIcon, footerText)
+															await interaction.editReply({
+																embeds: [advertEmbed],
+																components: [buttonsRow],
+																ephemeral: true
+															});
+															await wait(10000)
+
+															return imagesOption();
+														};
+													}else{
+														if(attachmentSize > 50000000){
+														await interaction.editReply({
+															embeds: [errorEmbed('The attachment you provided is too big, it must be under `100mb`\nGoing back to main menu in 5s...', initiatorAvatar)],
+															components: []
+														});
+														await wait(5000)
+														return imagesOption();
+													};
+												};
+												}else if(attachmentSize > 8000000){
 													//err, attachment too big
 													await interaction.editReply({
 														embeds: [errorEmbed('The attachment you provided is too big, it must be under `8mb`\nGoing back to main menu in 5s...', initiatorAvatar)],
@@ -508,32 +565,48 @@ module.exports = {
 									case `removeImage+${mainInteractionId}`:
 										async function removeImageOption(){
 											if(!buttonCollected.deferred) await buttonCollected.deferUpdate();
-											const vehicleImagesOutput = vehicleImages.map((x, i) => `${`\`${i+1}.\` [Click Here](${x})`}`)
+											
+											let pages = vehicleImages;
+											let page = 1;
+
 											const removeImageSelectionEmbed = new MessageEmbed()
 											.setAuthor({
-												name: 'Remove Vehicle Image',
+												name: `${vehicleName} - Remove Vehicle Image`,
 												iconURL: initiatorAvatar
 											})
-											.setDescription('Please type the number corresponding to the image you would like to remove.')
-											.addField('Vehicle', `[${vehicleName}](${verificationImage})`, true)
-											.addField('Owner', initiatorTag, true)
-											.addField('Image(s)', vehicleImagesOutput.join('\n'))
-											.setColor(embedColor)
+											.setDescription('Please click on the \'Delete Image\' button to remove the image.')
+											.setImage(vehicleImages[page-1])
 											.setFooter({
-												text: footerText,
+												text: `${guildName} • Image 1 of ${vehicleImages.length}`,
 												iconURL: footerIcon
-											});
+											})
+											.setColor(embedColor);
+
+											const previousButton = new MessageButton()
+											.setLabel('Previous')
+											.setStyle('SECONDARY')
+											.setCustomId(`previousImage+${mainInteractionId}`)
+											.setDisabled(true);
+											const nextButton = new MessageButton()
+											.setLabel('Next')
+											.setStyle('SECONDARY')
+											.setCustomId(`nextImage+${mainInteractionId}`);
+											const deleteButton = new MessageButton()
+											.setLabel('Delete Image')
+											.setStyle('DANGER')
+											.setCustomId(`deleteImage+${mainInteractionId}`);
+											const doneButton = new MessageButton()
+											.setLabel('Done')
+											.setStyle('PRIMARY')
+											.setCustomId(`removeImageBack+${mainInteractionId}`);
 											const buttonsRow = new MessageActionRow()
-											.addComponents(
-												new MessageButton()
-													.setLabel('Back')
-													.setStyle('SECONDARY')
-													.setCustomId(`removeImageBack+${mainInteractionId}`),
-												new MessageButton()
-													.setLabel('Exit')
-													.setStyle('DANGER')
-													.setCustomId(`removeImageExit+${mainInteractionId}`),
-											);
+
+											if(vehicleImages.length > 1){
+												buttonsRow.addComponents(previousButton).addComponents(nextButton);
+											};
+
+											buttonsRow.addComponents(deleteButton, doneButton);
+
 											await interaction.editReply({
 												embeds: [removeImageSelectionEmbed],
 												components: [buttonsRow]
@@ -542,14 +615,10 @@ module.exports = {
 											let whetherButtonCollected = false;
 											const buttonCollector = interaction.channel.createMessageComponentCollector({
 												filter: buttonFilter,
-												max: 1,
 												componentType: 'BUTTON',
-												time: 60000
+												time: 600000
 											});
-											
-											buttonCollector.on('end', async (allCollected) => {
-												const collected = allCollected?.first();
-												if(!collected) return;
+											buttonCollector.on('collect', async (collected) => {
 												whetherButtonCollected = true;
 												await collected.deferUpdate();
 												const buttonId = collected.customId;
@@ -557,125 +626,74 @@ module.exports = {
 													return imagesOption();
 												}else if(buttonId === `removeImageExit+${mainInteractionId}`){
 													await interaction.deleteReply();
+												}else if(buttonId === `deleteImage+${mainInteractionId}`){
+													/*
+													If the button is clicked, make the button disabled and then delete the image
+													Reply to the button click with a confirmation message.
+													add the deleted image into a temp array
+													In previous and next image buttons, check if the current image is in the temp array, if it is, then disable the delete button for them.
+													*/
+													let deleteImage = vehicleImages[page-1];
+
+													const index = vehicleImages.indexOf(deleteImage);
+													if (index > -1) { // only splice array when item is found
+														vehicleImages.splice(index, 1); // 2nd parameter means remove one item only
+}													deleteButton.setDisabled(true).setLabel('Deleted Image')
+													const row = new MessageActionRow() 
+													row.addComponents(previousButton,nextButton,deleteButton, doneButton);
+													await interaction.editReply({
+														embeds: [removeImageSelectionEmbed],
+														components: [row]
+													});
+													await garageSchema.updateOne({guildId: guildId, userId: initiatorId, vehicle: vehicleName }, {$set: {vehicleImages: vehicleImages }})
+
+												}else if(buttonId === `previousImage+${mainInteractionId}`){
+													if (page <= 1) return;
+													page--;
+													removeImageSelectionEmbed
+													.setImage(pages[page - 1])
+													.setFooter({
+														text: `${guildName} • Image ${page} of ${vehicleImages.length}`,
+														iconURL: footerIcon
+													})
+													nextButton.setDisabled(false);
+													if (page <= 1){
+														previousButton.setDisabled(true);
+													};
+													deleteButton.setDisabled(false).setLabel('Delete Image');
+													const row = new MessageActionRow() 
+													row.addComponents(previousButton,nextButton,deleteButton, doneButton);
+													await interaction.editReply({
+														embeds: [removeImageSelectionEmbed],
+														components: [row]
+													});
+												}else if(buttonId === `nextImage+${mainInteractionId}`){
+													if (page >= pages.length) return;
+													page++;
+													removeImageSelectionEmbed
+													.setImage(pages[page - 1])
+													.setFooter({
+														text: `${guildName} • Image ${page} of ${vehicleImages.length}`,
+														iconURL: footerIcon
+													});
+													previousButton.setDisabled(false);
+													if (page >= pages.length){
+														nextButton.setDisabled(true);
+													};
+													deleteButton.setDisabled(false).setLabel('Delete Image');
+													const row = new MessageActionRow() 
+													row.addComponents(previousButton,nextButton,deleteButton, doneButton);
+													await interaction.editReply({
+														embeds: [removeImageSelectionEmbed],
+														components: [row]
+													});
 												};
 											});
 
-											const messageCollector = interaction.channel.createMessageCollector({ filter: messageFilter, time: 60000, max: 1});
-											messageCollector.on('end', async (allCollected) => {
-												const collected = allCollected.first();
-												if(!collected){
-													if(whetherButtonCollected){
-														return;
-													}else{
-														await interaction.deleteReply();
-													};
+											buttonCollector.on('end',async (collected) => {
+												if(!whetherButtonCollected){
+													await interaction.deleteReply();
 												};
-												buttonCollector.stop();
-												const messageContent = collected.content;
-												const allowedResponses = Array.from(Array(vehicleImages.length + 1).keys()).slice(1).map(x => `${x}`);
-												const selectedOption = removeNonIntegers(messageContent);
-												if(!allowedResponses.includes(selectedOption)){
-													await interaction.followUp({
-														embeds:[errorEmbed('You entered an invalid input, going back to image menu...')],
-														ephemeral: true
-													});
-													return imagesOption();
-												};
-												const selectedIndex = parseInt(selectedOption) - 1
-												const vehicleImagesOutputNew = vehicleImages.map((x,i) => {
-													if(i !== selectedIndex){
-														return `${`\`${i+1}.\` [Click Here](${x})`}`
-													}else{
-														return `${`\`${i+1}.\` ~~[Click Here](${x})~~`}`
-													};
-												});
-												const imageRemoved = vehicleImages[selectedIndex]
-												vehicleImages.splice(selectedIndex, 1);
-
-												await garageSchema.updateOne({guildId: guildId, userId: initiatorId, vehicle: vehicleName }, {$set: {vehicleImages: vehicleImages }})
-												.catch(async e => {
-													await interaction.editReply({
-														embeds: [errorEmbed(e, initiatorAvatar)],
-														components: []
-													})
-													return;
-												});
-												
-												const removeImageConfirmationEmbed = new MessageEmbed()
-												.setAuthor({
-													name: 'Removed Vehicle Image Successfully',
-													iconURL: initiatorAvatar
-												})
-												.setDescription(`The [image](${imageRemoved}) has been removed from your vehicle successfully.`)
-												.addField('Vehicle', `[${vehicleName}](${verificationImage})`, true)
-												.addField('Owner', initiatorTag, true)
-												.addField('Image(s)', vehicleImagesOutputNew.join('\n'))
-												.setColor(greenColor)
-												.setFooter({
-													text: footerText,
-													iconURL: footerIcon
-												});
-												const buttonsRow = new MessageActionRow()
-												.addComponents(
-													new MessageButton()
-														.setLabel('Back')
-														.setStyle('SECONDARY')
-														.setCustomId(`removeImageConfirmedBack+${mainInteractionId}`),
-													new MessageButton()
-														.setLabel('Exit')
-														.setStyle('DANGER')
-														.setCustomId(`removeImageConfirmedExit+${mainInteractionId}`),
-												);
-												await interaction.editReply({
-													embeds: [removeImageConfirmationEmbed],
-													components: [buttonsRow]
-												});
-
-												const removeImageLogEmbed = new MessageEmbed()
-												.setAuthor({
-													name: 'Vehicle Image Removed',
-													iconURL: initiatorAvatar
-												})
-												.setDescription(`An [image](${imageRemoved}) was removed from the vehicle specified below.`)
-												.addField('Vehicle', `[${vehicleName}](${verificationImage})`, true)
-												.addField('Owner', initiatorTag, true)
-												.addField('Image(s)', vehicleImagesOutputNew.join('\n'))
-												.setThumbnail(imageRemoved)
-												.setColor(greenColor)
-												.setFooter({
-													text: footerText,
-													iconURL: footerIcon
-												});
-												logChannel.send({
-													embeds: [removeImageLogEmbed]
-												});
-												const buttonCollected = await interaction.channel.awaitMessageComponent({ filter: buttonFilter, componentType: 'BUTTON', time: 60000, max: 1 })
-												.catch(e => {});
-												if(!buttonCollected){
-													await interaction.editReply({
-														embeds: [removeImageConfirmationEmbed],
-														components: []
-													});
-													return;
-												};
-												const buttonId = buttonCollected.customId;
-												switch(buttonId){
-													case `removeImageConfirmedBack+${mainInteractionId}`:
-														async function removeImageConfirmedBack(){
-															await buttonCollected.deferUpdate();
-															return imagesOption();
-														};
-														removeImageConfirmedBack();
-														break;
-													case `removeImageConfirmedExit+${mainInteractionId}`:
-														async function removeImageConfirmedExit(){
-															await buttonCollected.deferUpdate();
-															await interaction.deleteReply();
-														};
-														removeImageConfirmedExit();
-														break;
-												};
-
 											});
 										};
 										removeImageOption();
