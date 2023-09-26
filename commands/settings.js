@@ -710,7 +710,6 @@ module.exports = {
 											.setDescription(`A total of **${vehicleImages.length}** image(s) will be reset from your vehicle. Please use the buttons down below to proceed.`)
 											.addField('Vehicle', `[${vehicleName}](${verificationImage})`, true)
 											.addField('Owner', initiatorTag, true)
-											.addField('Image(s)', imagesToReset.join('\n'))
 											.setColor(embedColor)
 											.setFooter({
 												text: footerText,
