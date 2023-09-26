@@ -701,7 +701,6 @@ module.exports = {
 									case `resetImage+${mainInteractionId}`:
 										async function resetImageOption(){
 											if(!buttonCollected.deferred) await buttonCollected.deferUpdate();
-											const imagesToReset = vehicleImages.map((x, i) => `${`\`${i+1}.\` [Click Here](${x})`}`)
 											const resetEmbed = new MessageEmbed()
 											.setAuthor({
 												name: 'Reset All Vehicle Images',
@@ -772,7 +771,6 @@ module.exports = {
 														.setDescription(`A total of **${vehicleImages.length}** image(s) have been reset from your vehicle. You can find the details down below.`)
 														.addField('Vehicle', `[${vehicleName}](${verificationImage})`, true)
 														.addField('Owner', initiatorTag, true)
-														.addField('Image(s)', imagesToReset.join('\n'))
 														.setColor(greenColor)
 														.setFooter({
 															text: footerText,
@@ -804,7 +802,6 @@ module.exports = {
 														.setDescription(`A total of **${vehicleImages.length}** image(s) have been reset from the vehicle specified below.`)
 														.addField('Vehicle', `[${vehicleName}](${verificationImage})`, true)
 														.addField('Owner', initiatorTag, true)
-														.addField('Image(s)', imagesToReset.join('\n'))
 														.setColor(greenColor)
 														.setFooter({
 															text: footerText,
@@ -855,7 +852,6 @@ module.exports = {
 														.setDescription(`Your vehicle's images have not been reset.`)
 														.addField('Vehicle', `[${vehicleName}](${verificationImage})`, true)
 														.addField('Owner', initiatorTag, true)
-														.addField('Image(s)', imagesToReset.join('\n'))
 														.setColor(redColor)
 														.setFooter({
 															text: footerText,
