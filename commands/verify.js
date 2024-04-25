@@ -33,6 +33,8 @@ module.exports = {
 		const guildId = interaction.guild.id;
 		const guildName = interaction.guild.name;
 		const guildIcon = interaction.guild.iconURL({ dynamic: true });
+		const guildBoostLevel = interaction.guild.premiumTier;
+
 		//Guild Profile
 		const guildProfile = await obtainGuildProfile(guildId);
 		if(!guildProfile){
@@ -95,6 +97,7 @@ module.exports = {
 			return;
 		};
 		//If the attachment is greater than 8mb.
+
 		if(vehicleImageSize > 8000000){
 			await interaction.editReply({
 				embeds: [errorEmbed('The attachment you provided is too big, it must be under `8mb`', initiatorAvatar)],

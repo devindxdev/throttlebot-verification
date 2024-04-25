@@ -87,7 +87,7 @@ function patreonAdvertEmbed(avatar, title, description, footerIcon, footerText){
         name: title,
         iconURL: avatar
     })
-    .setDescription(description+'\n\nBy supporting, not only do you help with the development of the bot, your support allows us to keep the bot free for anyone to use.')
+    .setDescription(description+'\n\n"Your support contributes to the bot\'s development and helps maintain its free availability for everyone!".')
     .setImage(patreonBanner)
     .setColor(patreonRedColor)
     .setFooter({

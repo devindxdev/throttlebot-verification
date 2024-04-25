@@ -1,7 +1,9 @@
 const { MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { obtainGuildProfile, defaultEmbedColor, obtainAllUserVehicles, obtainUserProfile } = require('../modules/database.js');
-const {  errorEmbed, removeNonIntegers, tipsEmbed } = require('../modules/utility.js');
+const {  errorEmbed, removeNonIntegers, tipsEmbed, patreonAdvertEmbed } = require('../modules/utility.js');
+const Chance = require('chance');
+const chance = new Chance();
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -163,11 +165,15 @@ module.exports = {
 				components: componentsArray
 			});
 
-			if(userId === initiatorId && vehicleImages.length === 1){
-				await interaction.followUp({
-					embeds: [tipsEmbed('You can now upload 5 images of your vehicle by default!\nVisit the dedicated bot commands channel and use the command **`/settings`** to make changes to your vehicles.')],
-					ephemeral: true
-				});
+			const patreonAd = patreonAdvertEmbed(initiatorAvatar, 'Join the Patreon!', 'Enhance your vehicles with more images and detailed descriptions. Enjoy an exclusive supporter role, with permanent access to these perks!', footerIcon, "ThrottleBot Verification Patreon")
+			if(!premiumUser){
+				if(chance.bool({ likelihood: 30 })){
+					await interaction.followUp({
+						embeds: [patreonAd.advertEmbed],
+						components: [patreonAd.buttonsRow],
+						ephemeral: true
+					});
+				};
 			};
 			//Button collector to manage the multiple images if it exists.
 			if(vehicleImages.length > 1){
