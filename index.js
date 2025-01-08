@@ -15,15 +15,6 @@ const client = new Client({
 		GatewayIntentBits.GuildMessages,
 		GatewayIntentBits.GuildMembers,
 	],
-	presence: {
-		status: 'online',
-		activities: [
-			{
-				name: '/help | Busy Verifying Shitboxes',
-				type: 'PLAYING',
-			},
-		],
-	},
 });
 
 // Command handler
@@ -63,9 +54,14 @@ for (const file of eventFiles) {
 	}
 }
 
-// Handle unhandled promise rejections
+// Global error handling
 process.on('unhandledRejection', (error) => {
 	console.error('🔥 Unhandled promise rejection:', error);
+});
+
+process.on('uncaughtException', (error) => {
+	console.error('🔥 Uncaught exception:', error);
+
 });
 
 // Login to Discord
