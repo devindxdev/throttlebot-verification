@@ -9,7 +9,8 @@ const {
     botInvite,
     supportServerInvite,
     patreonLink,
-    embedColor
+    embedColor,
+    ownerId
 } = require('../modules/constants.js');
 
 module.exports = {
@@ -64,15 +65,11 @@ module.exports = {
             new ButtonBuilder()
                 .setLabel('Patreon')
                 .setStyle(ButtonStyle.Link)
-                .setURL(patreonLink),
-            new ButtonBuilder()
-                .setLabel('GitHub')
-                .setStyle(ButtonStyle.Link)
-                .setURL(githubLink)
+                .setURL(patreonLink)
         );
 
         // Reply with the embed and buttons.
-        await interaction.editReply({
+        await interaction.reply({
             embeds: [supportEmbed],
             components: [buttons],
         });
