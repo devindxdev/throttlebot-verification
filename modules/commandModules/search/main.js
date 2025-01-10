@@ -1,6 +1,6 @@
-const { searchGlobal } = require('../searchUtils/searchGlobal.js')
-const { searchExit } = require('../searchUtils/searchExit.js')
-const { searchServer } = require('../searchUtils/searchServer.js')
+const { searchGlobal } = require('./searchGlobal.js')
+const { searchExit } = require('./searchExit.js')
+const { searchServer } = require('./searchServer.js')
 const { obtainGuildProfile } = require('../../database.js');
 const { botIcon } = require('../../utility.js')
 

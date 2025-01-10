@@ -9,8 +9,8 @@ const guildSchema = mongoose.Schema({
   verifiedVehicleRoleId: String,
   addedOn: String,
   customFooterIcon: String,
-  syncEnabled: Boolean,
-  syncedGuildId: String,
+  passportEnabled: Boolean,
+  passportGuildId: String,
 });
 
 module.exports = mongoose.model("Guilds", guildSchema); 

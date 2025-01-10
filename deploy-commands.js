@@ -7,7 +7,8 @@ const discordToken = process.env.TOKEN;
 const commands = [];
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 
-const clientId = "851411747641884712";
+const clientId = "983758197468852274";
+const guildId = "851413403222147073"; // Replace with your server ID
 
 for (const file of commandFiles) {
     const command = require(`./commands/${file}`);
@@ -15,7 +16,6 @@ for (const file of commandFiles) {
 };
 const rest = new REST({ version: '9' }).setToken(discordToken);
 
-rest.put(Routes.applicationCommands(clientId), { body: commands }) 
-    .then((result) => console.log('Successfully registered application commands. - ', result.length) )
+rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands })
+    .then((result) => console.log('Successfully registered application commands for guild. - ', result.length))
     .catch(console.error);
-

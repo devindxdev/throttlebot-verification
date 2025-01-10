@@ -4,13 +4,15 @@ const {
 } = require('../modules/constants.js');
 
 
-function removeNonIntegers(string){
-    return string.replace(/\D/g,'');
-};
+// Removes all non-integer characters from a string
+function removeNonIntegers(string) {
+    return string.replace(/\D/g, '');
+}
 
+// Capitalizes the first letter of a string
 function capitalizeFirstLetter(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
-  }
+}
 
 function errorEmbed(
     errMsg, 
@@ -52,55 +54,55 @@ function errorEmbed(
     return { embed, components }; // Return both the embed and components
 }
 
-function tipsEmbed(tipMsg, embedColor = '#FFFCFF'){
-    const embed = new MessageEmbed()
-    .setColor(embedColor)
-    .setAuthor(
-        {
-            name: "Throttle Tips",
-            iconURL: 'https://www.pngmart.com/files/6/Light-Bulb-PNG-File.png'
-        }
-    )
-    .setDescription(tipMsg);
+// Creates a tips embed
+function tipsEmbed(tipMsg, embedColor = '#FFFCFF') {
+    const embed = new EmbedBuilder()
+        .setColor(embedColor)
+        .setAuthor({
+            name: 'Throttle Tips',
+            iconURL: 'https://www.pngmart.com/files/6/Light-Bulb-PNG-File.png',
+        })
+        .setDescription(tipMsg);
     return embed;
 }
 
 
 function isValidHttpUrl(string) {
-    //Checks whether the provided string is a valid URL.
     let url;
     try {
-      url = new URL(string);
+        url = new URL(string);
     } catch (_) {
-      return false;  
+        return false;
     }
-    return url.protocol === "http:" || url.protocol === "https:";
-};
+    return url.protocol === 'http:' || url.protocol === 'https:';
+}
 
-function patreonAdvertEmbed(avatar, title, description, footerIcon, footerText){
-    const patreonAdvertisementEmbed = new MessageEmbed()
-    .setAuthor({
-        name: title,
-        iconURL: avatar
-    })
-    .setDescription(description+'\n\n"Your support contributes to the bot\'s development and helps maintain its free availability for everyone!".')
-    .setImage(patreonBanner)
-    .setColor(patreonRedColor)
-    .setFooter({
-        text: footerText,
-        iconURL: footerIcon
-    })
-    const linksRow = new MessageActionRow()
-    .addComponents(
-        new MessageButton()
+// Creates a Patreon advertisement embed
+function patreonAdvertEmbed(avatar, title, description, footerIcon, footerText) {
+    const embed = new EmbedBuilder()
+        .setAuthor({
+            name: title,
+            iconURL: avatar,
+        })
+        .setDescription(
+            `${description}\n\n"Your support contributes to the bot's development and helps maintain its free availability for everyone!".`
+        )
+        .setImage(patreonBanner)
+        .setColor(patreonRedColor)
+        .setFooter({
+            text: footerText,
+            iconURL: footerIcon,
+        });
+
+    const buttonsRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
             .setLabel('Patreon')
-            .setStyle('LINK')
+            .setStyle(ButtonStyle.Link)
             .setURL(patreonLink)
     );
-    return {
-        advertEmbed: patreonAdvertisementEmbed,
-        buttonsRow: linksRow
-    };
+
+    return { embed, buttonsRow };
+
 }
 
 module.exports = { 

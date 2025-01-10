@@ -25,6 +25,7 @@
   },
   "homepage": "https://github.com/davidxdeveloper/throttlebot-verification#readme",
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
     "chance": "^1.1.11",
     "discord.js": "^14.17.2",
     "dotenv": "^16.0.1",

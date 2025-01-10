@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { obtainGuildProfile, defaultEmbedColor, obtainAllUserVehicles, obtainUserProfile, obtainVehicleSearch } = require('../modules/database.js');
 const {  errorEmbed, removeNonIntegers, tipsEmbed } = require('../modules/utility.js');
-const { vehicleSearch } = require('../modules/commandUtils/searchUtils/main.js')
+const { vehicleSearch } = require('../modules/commandModules/search/main.js')
 
 module.exports = {
     data: new SlashCommandBuilder()

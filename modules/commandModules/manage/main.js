@@ -1,14 +1,14 @@
 
 const { MessageEmbed, MessageActionRow, MessageSelectMenu } = require('discord.js');
 const { obtainGuildProfile, obtainAllUserVehicles } = require('../../database.js');
-const { vehicleSelection } = require('../garageUtils/vehicleSelection.js');
+//const { vehicleSelection } = require('../garage/vehicleSelection.js');
 const { botIcon, errorEmbed } = require('../../utility.js');
 const { manageName } = require('./manage_name.js');
 const { manageDescription } = require('./manage_description.js');
-const { manageGarageIcon } = require('./manage_garageIcon');
-const { manageDelete } = require('./manage_delete');
-const { manageReset } = require('./manage_reset');
-const { manageExit } = require('./manage_exit');
+const { manageGarageIcon } = require('./manage_garageIcon.js');
+const { manageDelete } = require('./manage_delete.js');
+const { manageReset } = require('./manage_reset.js');
+const { manageExit } = require('./manage_exit.js');
 
 async function manageDashboard(
     interaction,
