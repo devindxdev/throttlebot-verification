@@ -2,7 +2,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 
 const presenceMessages = [
-    "Busy verifying shitboxes",
+    "Busy verifying rides",
     "Cruising through servers",
     "Making sure rides are legit",
     "Scanning VINs and plates",
@@ -16,17 +16,25 @@ const presenceMessages = [
 module.exports = {
     name: 'ready',
     once: true,
-    execute(client) {
+    /**
+     * Executes when the bot is ready.
+     * @param {import('discord.js').Client} client - The Discord client instance.
+     */
+    async execute(client) {
         console.log(`Ready! Logged in as ${client.user.tag}`);
 
         // Connect to MongoDB
         const mongoURI = process.env.MONGOURI;
-        mongoose
-            .connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
-            .then(() => console.log('MongoDB connection established.'))
-            .catch((error) =>
-                console.log(`MongoDB connection failed.\nError: ${error}`)
-            );
+        try {
+            await mongoose.connect(mongoURI, {
+                useNewUrlParser: true,
+                useUnifiedTopology: true,
+            });
+            console.log('MongoDB connection established.');
+        } catch (error) {
+            console.error(`MongoDB connection failed.\nError: ${error.message}`);
+            return; // Exit early if database connection fails
+        }
 
         // Dynamic presence updates
         let currentIndex = 0;
@@ -34,11 +42,11 @@ module.exports = {
         setInterval(() => {
             const newActivity = presenceMessages[currentIndex];
             client.user.setPresence({
-                activities: [{ name: newActivity, type: "PLAYING" }],
-                status: "online",
+                activities: [{ name: newActivity, type: 0 }], // Type 0 = Playing
+                status: 'online',
             });
 
             currentIndex = (currentIndex + 1) % presenceMessages.length; // Cycle through messages
-        }, 5 * 60 * 1000); // Updates every 5m
+        }, 5 * 60 * 1000); // Updates every 5 minutes
     },
 };

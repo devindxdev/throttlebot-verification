@@ -1,24 +1,44 @@
 const garageSchema = require('../mongodb_schema/garageSchema.js');
 
 module.exports = {
-	name: 'messageDelete',
-	async execute(message) {
-        const attachment = message.attachments.first()
-        const attachmentURL = attachment?.url;
-        if(attachmentURL){
-            const data = await garageSchema.find().all('vehicleImages',[attachmentURL]);
-            if(data && data.length > 0){
+    name: 'messageDelete',
+    once: false,
+    /**
+     * Executes when a message is deleted.
+     * @param {import('discord.js').Message} message - The deleted message object.
+     */
+    async execute(message) {
+        try {
+            // Check for an attachment in the deleted message
+            const attachment = message.attachments.first();
+            const attachmentURL = attachment?.url;
+
+            if (!attachmentURL) return;
+
+            // Search the database for entries containing the deleted attachment URL
+            const data = await garageSchema.find({ vehicleImages: attachmentURL });
+            if (data?.length > 0) {
                 const vehicleData = data[0];
-                const userId = vehicleData.userId;
-                const guildId = vehicleData.guildId
-                const vehicleName = vehicleData.vehicle;
-                const vehicleImages = vehicleData.vehicleImages;
+                const { userId, guildId, vehicle, vehicleImages } = vehicleData;
+
                 const deletedImageURL = attachmentURL;
-                const index = vehicleImages.indexOf(deletedImageURL);
                 const errorImage = 'https://cdn.discordapp.com/attachments/975485952325726278/995130454502023188/Error_1.png';
-                vehicleImages.splice(index, 1, errorImage);
-                await garageSchema.updateOne({ vehicle: vehicleName, guildId: guildId, userId: userId }, { $set: { vehicleImages: vehicleImages }});
-            };
-        };
+
+                // Replace the deleted image with an error image in the vehicleImages array
+                const updatedVehicleImages = vehicleImages.map(image =>
+                    image === deletedImageURL ? errorImage : image
+                );
+
+                // Update the database with the modified images
+                await garageSchema.updateOne(
+                    { vehicle, guildId, userId },
+                    { $set: { vehicleImages: updatedVehicleImages } }
+                );
+
+                console.log(`Replaced deleted image in vehicle: ${vehicle} for user: ${userId}`);
+            }
+        } catch (error) {
+            console.error(`Error in messageDelete event: ${error.message}`);
+        }
     },
 };

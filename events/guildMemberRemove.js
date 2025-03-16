@@ -1,50 +1,92 @@
-const { MessageActionRow, MessageButton } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { obtainGuildProfile, obtainAllOpenUserApplications } = require('../modules/database.js');
 const verificationSchema = require('../mongodb_schema/verificationApplicationSchema.js');
-const { redColor, botId } = require('../modules/utility.js');
+const { redColor, botId } = require('../modules/constants.js');
 const moment = require('moment');
-const mongoose = require('mongoose');
 
 module.exports = {
-	name: 'guildMemberRemove',
-	async execute(member) {
-		if(member.user.bot) return;
-		const userId = member.user.id;
-		const guildId = member.guild.id;
-		const openApplications = await obtainAllOpenUserApplications(userId, guildId);
-		if(!openApplications) return;
-		const guildProfile = await obtainGuildProfile(guildId);
-		if(!guildProfile) return;
-		const verificationChannelId = guildProfile.verificationChannelId;
-		const guideChannelId = guildProfile.guideChannelId;
-		const loggingChannelId = guildProfile.loggingChannelId;
-		const verificationChannel = await member.guild.channels.fetch(verificationChannelId);
-		if(!verificationChannel) return;
-		const todaysDate = moment.utc();
-		openApplications.map(async application => {
-			const vehicleName = application.vehicle;
-			const applicationMessageId = application.applicationMessageId;
-			const applicationMessage = await verificationChannel.messages.fetch(applicationMessageId);
-			if(!applicationMessage) return;
-			await verificationSchema.updateOne({userId: userId, vehicle: vehicleName, status: 'open'}, {$set: { status: 'closed', decision: `denied | User Left`, decidedBy: botId, decidedOn: todaysDate }});
-			const applicationEmbed = applicationMessage.embeds[0];
-			applicationEmbed.fields[3].value = `Verification Denied | Reason: User left the server.`;
-			applicationEmbed.color = redColor
-			applicationEmbed.addField('Decided By', `Automatic`);
-			const deniedButton = new MessageButton()
-			.setCustomId('disabled')
-			.setLabel('Denied - User Left')
-			.setStyle('DANGER')
-			.setDisabled(true);
-			const row = new MessageActionRow()
-			.addComponents(deniedButton)
-			applicationMessage.edit({
-				embeds: [applicationEmbed],
-				components: [row]
-			});
+    name: 'guildMemberRemove',
+    once: false,
+    /**
+     * Executes whenever a member leaves a server.
+     * @param {import('discord.js').GuildMember} member - The member object
+     */
+    async execute(member) {
+        if (member.user.bot) return; // Ignore bots
 
+        try {
+            const userId = member.user.id;
+            const guildId = member.guild.id;
 
-		});
-		
-	},
+            // Fetch open applications and guild profile
+            const openApplications = await obtainAllOpenUserApplications(userId, guildId);
+            if (!openApplications?.length) return;
+
+            const guildProfile = await obtainGuildProfile(guildId);
+            if (!guildProfile) return;
+
+            const { verificationChannelId } = guildProfile;
+
+            // Fetch the verification channel
+            const verificationChannel = await member.guild.channels.fetch(verificationChannelId);
+            if (!verificationChannel) return;
+
+            const todaysDate = moment.utc();
+
+            // Iterate through open applications and update them
+            for (const application of openApplications) {
+                const vehicleName = application.vehicle;
+                const applicationMessageId = application.applicationMessageId;
+
+                // Fetch the application message
+                const applicationMessage = await verificationChannel.messages.fetch(applicationMessageId).catch(() => null);
+                if (!applicationMessage) continue;
+
+                // Update the application status in the database
+                await verificationSchema.updateOne(
+                    { userId, vehicle: vehicleName, status: 'open' },
+                    {
+                        $set: {
+                            status: 'closed',
+                            decision: 'denied | User Left',
+                            decidedBy: botId,
+                            decidedOn: todaysDate,
+                        },
+                    }
+                );
+
+                // Update the embed in the application message
+                const applicationEmbed = applicationMessage.embeds[0]?.toJSON();
+                if (!applicationEmbed) continue;
+
+                applicationEmbed.fields = applicationEmbed.fields.map(field =>
+                    field.name === 'Status'
+                        ? { ...field, value: `Verification Denied | Reason: User left the server.` }
+                        : field
+                );
+                applicationEmbed.color = parseInt(redColor.replace('#', ''), 16); // Convert hex to integer
+                applicationEmbed.fields.push({
+                    name: 'Decided By',
+                    value: 'Automatic',
+                });
+
+                // Create a "Denied" button
+                const deniedButton = new ButtonBuilder()
+                    .setCustomId('disabled')
+                    .setLabel('Denied - User Left')
+                    .setStyle(ButtonStyle.Danger)
+                    .setDisabled(true);
+
+                const row = new ActionRowBuilder().addComponents(deniedButton);
+
+                // Edit the application message
+                await applicationMessage.edit({
+                    embeds: [applicationEmbed],
+                    components: [row],
+                });
+            }
+        } catch (error) {
+            console.error(`Error in guildMemberRemove event: ${error.message}`);
+        }
+    },
 };
