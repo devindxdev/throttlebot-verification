@@ -80,7 +80,7 @@ module.exports = async (interaction, guildProfile) => {
         } catch (err) {
             
             // Respond with the error embed
-            const { embed, components } = errorEmbed(
+            const errorMessageEmbed = errorEmbed(
                 err.message,
                 interaction.user.displayAvatarURL({ dynamic: true }),
                 null, // No example
@@ -90,8 +90,8 @@ module.exports = async (interaction, guildProfile) => {
             );
 
             await menuInteraction.reply({
-                embeds: [embed],
-                components,
+                embeds: [errorMessageEmbed],
+                components: errorMessageEmbed.components,
                 ephemeral: true,
             });
         }

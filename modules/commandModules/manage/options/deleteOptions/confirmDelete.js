@@ -1,4 +1,4 @@
-const { MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const { exitGlobal } = require('../exitGlobal.js');
 const { backGlobal } = require('../backGlobal.js');
 const garageSchema = require('../../../../../mongodb_schema/garageSchema.js');
@@ -57,34 +57,36 @@ async function confirmDelete(
         return;
     });
 
-    const confirmDeleteEmbed = new MessageEmbed()
+    const confirmDeleteEmbed = new EmbedBuilder()
     .setAuthor({
         name: 'Management Dashboard - Delete Vehicle',
         iconURL: initiatorAvatar
     })
     .setDescription('The following vehicle was successfully deleted from the users garage.')
     .setColor(greenColor)
-    .addField('Vehicle', `[${vehicleName}](${verificationImage})`, true)
-    .addField('Owner', userTag, true)
+    .addFields(
+        { name: 'Vehicle', value: `[${vehicleName}](${verificationImage})`, inline: true },
+        { name: 'Owner', value: userTag, inline: true }
+    )
     .setFooter({
         text: footerText,
         iconURL: footerIcon
     });
 
-    const buttonsRow = new MessageActionRow()
+    const buttonsRow = new ActionRowBuilder()
     .addComponents(
-        new MessageButton()
+        new ButtonBuilder()
         .setLabel('Confirmed')
-        .setStyle('SUCCESS')
+        .setStyle(ButtonStyle.Success)
         .setCustomId(`disabled`)
         .setDisabled(true),
-        new MessageButton()
+        new ButtonBuilder()
         .setLabel('Back')
-        .setStyle('SECONDARY')
+        .setStyle(ButtonStyle.Secondary)
         .setCustomId(`backConfirmDelete+${mainInteractionId}`),
-        new MessageButton()
+        new ButtonBuilder()
         .setLabel('Exit')
-        .setStyle('DANGER')
+        .setStyle(ButtonStyle.Danger)
         .setCustomId(`exitConfirmDelete+${mainInteractionId}`)
     );
 
@@ -97,7 +99,7 @@ async function confirmDelete(
         components: [buttonsRow]
     });
     
-    const collectedButton = await interaction.channel.awaitMessageComponent({ filter: buttonFilter, componentType: 'BUTTON', time: 60000, max: 1 })
+    const collectedButton = await interaction.channel.awaitMessageComponent({ filter: buttonFilter, componentType: ComponentType.Button, time: 60000, max: 1 })
     .catch(e => {
     });
     if(!collectedButton){

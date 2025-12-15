@@ -1,4 +1,4 @@
-const { MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const { errorEmbed } = require('../../utility.js');
 const { exitGlobal } = require('./options/exitGlobal.js');
 const { backGlobal } = require('./options/backGlobal.js');
@@ -50,37 +50,39 @@ async function manageDelete(
     //Filters
     const buttonFilter = i => i.user.id === initiatorId && i.guild.id === guildId;
 
-    const manageDeleteDashboardEmbed = new MessageEmbed()
+    const manageDeleteDashboardEmbed = new EmbedBuilder()
     .setAuthor({
         name: 'Management Dashboard - Delete Vehicle',
         iconURL: initiatorAvatar
     })
     .setDescription('Are you sure you would like to permanently delete the following vehicle? This action is irreversible!')
     .setColor(embedColor)
-    .addField('Vehicle', `[${vehicleName}](${verificationImage})`, true)
-    .addField('Owner', userTag, true)
+    .addFields(
+        { name: 'Vehicle', value: `[${vehicleName}](${verificationImage})`, inline: true },
+        { name: 'Owner', value: userTag, inline: true }
+    )
     .setFooter({
         text: footerText,
         iconURL: footerIcon
     });
 
-    const buttonsRow = new MessageActionRow()
+    const buttonsRow = new ActionRowBuilder()
     .addComponents(
-        new MessageButton()
+        new ButtonBuilder()
         .setLabel('Confirm')
-        .setStyle('SUCCESS')
+        .setStyle(ButtonStyle.Success)
         .setCustomId(`confirmDelete+${mainInteractionId}`),
-        new MessageButton()
+        new ButtonBuilder()
         .setLabel('Cancel')
-        .setStyle('DANGER')
+        .setStyle(ButtonStyle.Danger)
         .setCustomId(`cancelDelete+${mainInteractionId}`),
-        new MessageButton()
+        new ButtonBuilder()
         .setLabel('Back')
-        .setStyle('SECONDARY')
+        .setStyle(ButtonStyle.Secondary)
         .setCustomId(`backDelete+${mainInteractionId}`),
-        new MessageButton()
+        new ButtonBuilder()
         .setLabel('Exit')
-        .setStyle('DANGER')
+        .setStyle(ButtonStyle.Danger)
         .setCustomId(`exitDelete+${mainInteractionId}`)
     );
 
@@ -89,7 +91,7 @@ async function manageDelete(
         components: [buttonsRow]
     });
 
-    const collectedButton = await interaction.channel.awaitMessageComponent({ filter: buttonFilter, componentType: 'BUTTON', time: 60000, max: 1 })
+    const collectedButton = await interaction.channel.awaitMessageComponent({ filter: buttonFilter, componentType: ComponentType.Button, time: 60000, max: 1 })
     .catch(e => {
     });
     if(!collectedButton){

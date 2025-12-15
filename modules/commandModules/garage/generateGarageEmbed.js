@@ -15,12 +15,20 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
         const isPassportVehicle = passportEnabled && vehicle.guildId === passportServerId;
         const imageCount = vehicle.vehicleImages?.length || 0;
 
+        const label =
+            vehicle?.vehicle && vehicle.vehicle.trim().length > 0
+                ? vehicle.vehicle.trim().slice(0, 100)
+                : `Vehicle ${index + 1}`;
+        const descriptionText = imageCount > 0
+            ? `${imageCount} image${imageCount === 1 ? '' : 's'} available to view`
+            : 'No images uploaded yet.';
+
         return {
-            label: `${vehicle.vehicle}`,
-            description: `${imageCount} image${imageCount === 1 ? '' : 's'} available to view`,
+            label,
+            description: descriptionText,
             value: `${index}`, // Corresponds to the index
-                emoji: isPassportVehicle ? '<:TCC:1326753919321243719>' : undefined, // Emoji for passport vehicles
-            };
+            emoji: isPassportVehicle ? '<:TCC:1326753919321243719>' : undefined, // Emoji for passport vehicles
+        };
         });
 
         // Embed content
@@ -87,6 +95,8 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
                     }
 
                     // Stop collector and return vehicle data
+                    if (!selectedVehicle?.vehicleImages || selectedVehicle.vehicleImages.length === 0) return;
+
                     collector.stop();
                     await require('./garageMenuHandler')(interaction, selectedOption, garageData, user, guildProfile);
                     

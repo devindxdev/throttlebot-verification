@@ -33,25 +33,26 @@ function errorEmbed(
     .setDescription(errMsg);
 
     if (example) {
-    embed.addFields({ name: 'Example', value: example });
+        embed.addFields({ name: 'Example', value: example });
     }
 
     if (footerText && footerIcon) {
-    embed.setFooter({ text: footerText, iconURL: footerIcon });
+        embed.setFooter({ text: footerText, iconURL: footerIcon });
     }
 
     // Create optional Support Server button
     const components = [];
     if (includeSupportButton) {
-    const supportButton = new ButtonBuilder()
-        .setLabel('Support Server')
-        .setStyle(ButtonStyle.Link)
-        .setURL(supportServerInvite);
+        const supportButton = new ButtonBuilder()
+            .setLabel('Support Server')
+            .setStyle(ButtonStyle.Link)
+            .setURL(supportServerInvite);
 
-    components.push(new ActionRowBuilder().addComponents(supportButton));
+        components.push(new ActionRowBuilder().addComponents(supportButton));
     }
-
-    return { embed, components }; // Return both the embed and components
+    
+    embed.components = components;
+    return embed;
 }
 
 // Creates a tips embed

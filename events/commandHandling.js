@@ -22,7 +22,7 @@ module.exports = {
 			console.error(`🔥 Error executing command "${interaction.commandName}":`, error);
 
 			// Generate the error embed with the support button
-			const { embed, components } = errorEmbed(
+			const errorMessageEmbed = errorEmbed(
 				'Something went wrong while executing the command.',
 				interaction.user.displayAvatarURL({ dynamic: true }),
 				null, // No example provided
@@ -33,13 +33,13 @@ module.exports = {
 			);
 			// Edit the deferred reply with the error embed
 			try {
-				await interaction.editReply({ embeds: [embed], components });
+				await interaction.editReply({ embeds: [errorMessageEmbed], components: errorMessageEmbed.components });
 			} catch (editError) {
 				// If editing the reply fails (e.g., interaction expired), send a fresh reply
 				console.error(`🔥 Failed to edit deferred reply for "${interaction.commandName}":`, editError);
 				await interaction.followUp({
-					embeds: [embed],
-					components,
+					embeds: [errorMessageEmbed],
+					components: errorMessageEmbed.components,
 					ephemeral: true,
 				});
 			}

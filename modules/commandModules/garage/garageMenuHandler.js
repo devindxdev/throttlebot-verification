@@ -8,7 +8,6 @@ const {
 
 module.exports = async (interaction, selectedOption, userGarage, guildProfile) => {
     try {
-        console.log("dis rajn")
         // Validate selected option
         const selectedIndex = parseInt(selectedOption);
         if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= userGarage.length) {
@@ -21,6 +20,8 @@ module.exports = async (interaction, selectedOption, userGarage, guildProfile) =
 
         // Check if the vehicle is from the Passport Server
         const isPassportVehicle = guildProfile.passportEnabled && guildId === guildProfile.passportGuildId;
+        const footerIconUrl = guildProfile.footerIcon || interaction.client.user.displayAvatarURL();
+        const guildDisplayName = interaction.guild?.name || guildProfile.guildName || 'Vehicle Verification';
 
         // Build the vehicle embed
         const vehicleEmbed = new EmbedBuilder()
@@ -45,8 +46,8 @@ module.exports = async (interaction, selectedOption, userGarage, guildProfile) =
             vehicleEmbed
                 .setImage(vehicleImages[currentPage])
                 .setFooter({
-                    text: `${interaction.guild.name} • Image 1 of ${vehicleImages.length}`,
-                    iconURL: guildProfile.footerIcon || interaction.client.user.displayAvatarURL(),
+                    text: `${guildDisplayName} • Image 1 of ${vehicleImages.length}`,
+                    iconURL: footerIconUrl,
                 });
 
             // Create navigation buttons
@@ -85,8 +86,8 @@ module.exports = async (interaction, selectedOption, userGarage, guildProfile) =
 
                 // Update embed with the new image
                 vehicleEmbed.setImage(vehicleImages[currentPage]).setFooter({
-                    text: `${guildProfile.guildName} • Image ${currentPage + 1} of ${vehicleImages.length}`,
-                    iconURL: guildProfile.footerIcon || interaction.client.user.displayAvatarURL(),
+                    text: `${guildDisplayName} • Image ${currentPage + 1} of ${vehicleImages.length}`,
+                    iconURL: footerIconUrl,
                 });
 
                 // Update button states
@@ -111,7 +112,7 @@ module.exports = async (interaction, selectedOption, userGarage, guildProfile) =
         } else {
             // If no images are available
             vehicleEmbed.setDescription(vehicleDescription || 'No images available for this vehicle.');
-            await interaction.update({
+            await interaction.editReply({
                 embeds: [vehicleEmbed],
                 components: [],
             });

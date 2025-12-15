@@ -1,6 +1,8 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { obtainGuildProfile } = require('../modules/database.js');
 const { errorEmbed } = require('../modules/utility.js');
+const getUserGarage = require('../modules/commandModules/garage/getUserGarage.js');
+const generateGarageEmbed = require('../modules/commandModules/garage/generateGarageEmbed.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -39,10 +41,9 @@ module.exports = {
 
         try {
             // Step 1: Fetch the user's garage
-            const garageData = await require('../modules/commandModules/garage/getUserGarage.js')(userId, guildProfile);
+            const garageData = await getUserGarage(userId, guildProfile);
             // Step 2: Generate the main garage embed with a dropdown menu
-            const { embed, components } = require('../modules/commandModules/garage/generateGarageEmbed.js')(interaction, garageData, user, guildProfile);
-           
+            await generateGarageEmbed(interaction, garageData, user, guildProfile);
 
         } catch (error) {
             console.error('Error in /garage command:', error);

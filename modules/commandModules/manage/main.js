@@ -1,10 +1,11 @@
 
-const { MessageEmbed, MessageActionRow, MessageSelectMenu } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ComponentType } = require('discord.js');
 const { obtainGuildProfile, obtainAllUserVehicles } = require('../../database.js');
-//const { vehicleSelection } = require('../garage/vehicleSelection.js');
+const { vehicleSelection } = require('../garage/vehicleSelection.js');
 const { botIcon, errorEmbed } = require('../../utility.js');
 const { manageName } = require('./manage_name.js');
 const { manageDescription } = require('./manage_description.js');
+const { manageImage } = require('./manage_image.js');
 const { manageGarageIcon } = require('./manage_garageIcon.js');
 const { manageDelete } = require('./manage_delete.js');
 const { manageReset } = require('./manage_reset.js');
@@ -33,7 +34,7 @@ async function manageDashboard(
     const guildIcon = guildData.iconURL({ dynamic: true });	
     
     //Filters
-    const menuFilter = (menuInteraction) => menuInteraction.componentType === 'SELECT_MENU' && menuInteraction.customId === `manageMenu+${mainInteractionId}` && menuInteraction.user.id === initiatorId && menuInteraction.guild.id === guildId;
+    const menuFilter = (menuInteraction) => menuInteraction.componentType === ComponentType.StringSelect && menuInteraction.customId === `manageMenu+${mainInteractionId}` && menuInteraction.user.id === initiatorId && menuInteraction.guild.id === guildId;
    
     //Misc
     const mainInteractionId = interaction.id;
@@ -107,23 +108,25 @@ async function manageDashboard(
     let vehicleDescription = selectedVehicleData.vehicleDescription;
     let vehicleImages = selectedVehicleData.vehicleImages;
     
-    const settingsDashboardEmbed = new MessageEmbed()
+    const settingsDashboardEmbed = new EmbedBuilder()
     .setAuthor({
         name: 'Verified Vehicle Management',
         iconURL: initiatorAvatar
     })
     .setDescription('This dashboard allows you to configure verified vehicles owned by a user.\nStart by selecting on the option you would ike to explore from the menu below. ')
-    .addField('Vehicle', `[${vehicleName}](${verificationImage})`, true)
-    .addField('Owner', userTag, true)
+    .addFields(
+        { name: 'Vehicle', value: `[${vehicleName}](${verificationImage})`, inline: true },
+        { name: 'Owner', value: userTag, inline: true }
+    )
     .setColor(embedColor)
     .setFooter({
         text: footerText,
         iconURL: footerIcon
     });
     
-    const row = new MessageActionRow()
+    const row = new ActionRowBuilder()
     .addComponents(
-        new MessageSelectMenu()
+        new StringSelectMenuBuilder()
             .setCustomId(`manageMenu+${mainInteractionId}`)
             .setPlaceholder('Select the option you wish to configure...')
             .addOptions([
@@ -131,6 +134,21 @@ async function manageDashboard(
                     label: 'Name',
                     description: 'Edit the name of the vehicle.',
                     value: `manage_name+${mainInteractionId}`,
+                },
+                {
+                    label: 'Images',
+                    description: 'Review or remove vehicle images.',
+                    value: `manage_image+${mainInteractionId}`,
+                },
+                {
+                    label: 'Description',
+                    description: 'Edit the vehicle description.',
+                    value: `manage_description+${mainInteractionId}`,
+                },
+                {
+                    label: 'Garage Icon',
+                    description: 'Update the user\'s garage icon.',
+                    value: `manage_garageIcon+${mainInteractionId}`,
                 },
                 {
                     label: 'Delete',
@@ -179,13 +197,44 @@ async function manageDashboard(
                 );
                 break;
             case `manage_image+${mainInteractionId}`:
+                manageImage(
+                    interaction,
+                    initiatorData,
+                    userData,
+                    guildData,
+                    embedColor,
+                    footerData,
+                    garageData,
+                    selectedVehicleData,
+                    logChannel
+                );
                 break;
                 
             case `manage_description+${mainInteractionId}`:
-                manageDescription();
+                manageDescription(
+                    interaction,
+                    initiatorData, 
+                    userData,
+                    guildData,
+                    embedColor,
+                    footerData,
+                    garageData,
+                    selectedVehicleData,
+                    logChannel
+                );
                 break;
             case `manage_garageIcon+${mainInteractionId}`:
-                manageGarageIcon();
+                manageGarageIcon(
+                    interaction,
+                    initiatorData, 
+                    userData,
+                    guildData,
+                    embedColor,
+                    footerData,
+                    garageData,
+                    selectedVehicleData,
+                    logChannel
+                );
                 break;
             case `manage_delete+${mainInteractionId}`:
                 manageDelete(

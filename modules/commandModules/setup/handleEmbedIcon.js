@@ -69,16 +69,16 @@ module.exports = async (interaction, guildProfile) => {
 
         // Handle errors gracefully
         if (interaction.replied || interaction.deferred) {
-            const { embed, components } = errorEmbed(
+            const errorMessageEmbed = errorEmbed(
                 error.message,
                 interaction.user.displayAvatarURL({ dynamic: true }),
                 null, // No example
                 interaction.client.user.displayAvatarURL({ dynamic: true }),
                 'Ensure the URL is valid and try again.',
                 true // Include Support Server button
-            );W
+            );
 
-            await interaction.followUp({ embeds: [embed], components, ephemeral: true });
+            await interaction.followUp({ embeds: [errorMessageEmbed], components: errorMessageEmbed.components, ephemeral: true });
         }
     }
 };

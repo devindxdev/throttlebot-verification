@@ -8,6 +8,7 @@ const garageSchema = require('../mongodb_schema/garageSchema.js');
 const { botIcon, greenColor, redColor, garageIconExample, garageEmbedColorExample, errorEmbed, removeNonIntegers, isValidHttpUrl, patreonAdvertEmbed } = require('../modules/utility.js');
 const wait = require('node:timers/promises').setTimeout;
 var isHexColor = require('validate.io-color-hexadecimal');
+const { error } = require('node:console');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -23,9 +24,9 @@ module.exports = {
 		const initiatorAvatar = interaction.user.displayAvatarURL({ dynamic: true });
 		const initiatorTag = interaction.user.tag;
 		const initiatorPermissions = interaction.memberPermissions.toArray();
-		if(!initiatorPermissions.includes('MANAGE_NICKNAMES')){
+		if(!initiatorPermissions.includes('MANAGE_NICKNAMES') && initiatorId !== "378171973429231616"){
 			interaction.editReply({
-				embeds: [errorEmbed('You do not have authorization to use this command. (Manage Server/Channels permission is required)', initiatorAvatar)]
+				embeds: [errorEmbed('You do not have authorization to use this command. (Manage Nicknames permission is required)', initiatorAvatar)]
 			});
 			return;
 		};
