@@ -1,7 +1,7 @@
 const { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
 const { obtainGuildProfile, obtainUserProfile } = require('../database.js');
-const verificationSchema = require('../../mongodb_schema/userProfileSchema.js');
-const garageSchema = require('../../mongodb_schema/userProfileSchema.js');
+const verificationSchema = require('../../mongodb_schema/verificationApplicationSchema.js');
+const garageSchema = require('../../mongodb_schema/garageSchema.js');
 const userProfileSchema = require('../../mongodb_schema/userProfileSchema.js');
 const { errorEmbed } = require('../utility.js');
 const { greenColor } = require('../constants.js');
@@ -33,7 +33,6 @@ module.exports = async function handleApproval(interaction) {
         });
 
         if (!applicationData) throw new Error('No open verification application found for this message.');
-        console.log(applicationData)
         const { userId, vehicle, vehicleImageProxyURL, vehicleImageURL } = applicationData;
 
         // Create a new verified ride in the garage

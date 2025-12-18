@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const garageSchema = require('../../../../../mongodb_schema/garageSchema.js');
+const { updateVehicleName } = require('../../services/vehicleService.js');
 
 async function setName(
     initiatorData, 
@@ -41,10 +41,12 @@ const footerIcon = footerData.icon;
 const footerText = footerData.text;
 
 try {
-    await garageSchema.updateOne(
-        { guildId, userId, vehicle: vehicleName },
-        { $set: { vehicle: providedName } }
-    );
+    await updateVehicleName({
+        guildId,
+        userId,
+        currentName: vehicleName,
+        newName: providedName,
+    });
 } catch (err) {
     return {
         success: false,

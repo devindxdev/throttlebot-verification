@@ -4,7 +4,8 @@ const {
     EmbedBuilder,
     ActionRowBuilder,
     StringSelectMenuBuilder, 
-	ComponentType
+	ComponentType,
+    PermissionsBitField,
 } = require('discord.js');
 
 // Import the MongoDB schema for guild profiles
@@ -17,24 +18,29 @@ const handleGuideChannel = require('../modules/commandModules/setup/handleGuideC
 const handleLoggingChannel = require('../modules/commandModules/setup/handleLoggingChannel.js');
 const handleVerifiedRole = require('../modules/commandModules/setup/handleVerifiedRole.js');
 const handleEmbedIcon = require('../modules/commandModules/setup/handleEmbedIcon.js');
+const handleGeminiAnalysis = require('../modules/commandModules/setup/handleGeminiAnalysis.js');
 const exitSetup = require('../modules/commandModules/setup/exitSetup.js');
 
+/**
+ * /setup command: guides admins through configuring core guild settings.
+ */
 module.exports = {
     // Define the slash command
     data: new SlashCommandBuilder()
         .setName('setup')
         .setDescription('Setup the bot for your server.'),
     async execute(interaction) {
-        // Check if the user has ManageGuild permission
-        if (!interaction.member.permissions.has('ManageGuild')) {
-            throw new Error('You do not have the necessary permissions to use this command. (Requires Manage Server permission)');
-        };
+        try {
+            // Check if the user has ManageGuild permission
+            if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
+                throw new Error('You do not have the necessary permissions to use this command. (Requires Manage Server permission)');
+            }
 
 
-		if(!interaction.deferred) await interaction.deferReply({ ephemral: true });
-        // Get guild information
-        const guildId = interaction.guild.id;
-        const guildName = interaction.guild.name;
+		    if(!interaction.deferred) await interaction.deferReply({ ephemeral: true });
+            // Get guild information
+            const guildId = interaction.guild.id;
+            const guildName = interaction.guild.name;
 
         // Fetch existing guild profile or create a new one if it doesn't exist
         let guildProfile = await guildProfileSchema.findOne({ guildId });
@@ -50,6 +56,7 @@ module.exports = {
                 customFooterIcon: null,
                 syncEnabled: false,
                 syncedGuildId: null,
+                geminiAnalysisEnabled: false,
             });
 
             try {
@@ -104,11 +111,19 @@ module.exports = {
 					: '**Not set**\nMembers will be assigned this role upon successful verification.',
 				inline: false,
 			},
+            {
+                name: '🖼️ Embed Icon',
+                value: guildProfile.customFooterIcon
+                    ? `**Current Icon:** [View Icon](${guildProfile.customFooterIcon})\nCustomize the icon displayed in the footer of bot embeds.`
+                    : '**Not set**\nCustomize the icon displayed in the footer of bot embeds.',
+                inline: false,
+            }
+			,
 			{
-				name: '🖼️ Embed Icon',
-				value: guildProfile.customFooterIcon
-					? `**Current Icon:** [View Icon](${guildProfile.customFooterIcon})\nCustomize the icon displayed in the footer of bot embeds.`
-					: '**Not set**\nCustomize the icon displayed in the footer of bot embeds.',
+				name: '🤖 Gemini Analysis',
+				value: guildProfile.geminiAnalysisEnabled
+					? '**Enabled**\nApplications will be auto-reviewed by Gemini.'
+					: '**Disabled**\nAuto-analysis of applications is turned off.',
 				inline: false,
 			}
 		)
@@ -153,6 +168,11 @@ module.exports = {
 				value: 'embed_icon',
 			},
 			{
+				label: '🤖 Gemini Analysis',
+				description: 'Enable or disable automatic Gemini analysis.',
+				value: 'gemini_analysis',
+			},
+			{
 				label: '❌ Exit',
 				description: 'Exit the setup process without making changes.',
 				value: 'exit',
@@ -172,6 +192,7 @@ module.exports = {
             filter: (i) => i.user.id === interaction.user.id
         });
 
+        let handled = false;
         // Handle menu selection events
         collector.on('collect', async (menuInteraction) => {
             const selectedOption = menuInteraction.values[0];
@@ -180,28 +201,41 @@ module.exports = {
 				case 'global_passport':
 					collector.stop(); 
                     await handleGlobalPassport(menuInteraction, guildProfile);
+                    handled = true;
                     break;
                 case 'verification_channel':
 					collector.stop(); 
                     await handleVerificationChannel(menuInteraction, guildProfile);
+                    handled = true;
                     break;
                 case 'guide_channel':
 					collector.stop(); 
                     await handleGuideChannel(menuInteraction, guildProfile);
+                    handled = true;
                     break;
                 case 'logging_channel':
 					collector.stop(); 
                     await handleLoggingChannel(menuInteraction, guildProfile);
+                    handled = true;
                     break;
                 case 'verified_role':
 					collector.stop(); 
                     await handleVerifiedRole(menuInteraction, guildProfile);
+                    handled = true;
                     break;
                 case 'embed_icon':
+                    collector.stop();
                     await handleEmbedIcon(menuInteraction, guildProfile);
+                    handled = true;
                     break;
+				case 'gemini_analysis':
+					collector.stop(); 
+					await handleGeminiAnalysis(menuInteraction, guildProfile);
+                    handled = true;
+					break;
                 case 'exit':
                     await exitSetup(menuInteraction);
+                    handled = true;
                     break;
                 default:
                     await menuInteraction.reply({
@@ -211,5 +245,23 @@ module.exports = {
                     break;
             }
         });
+
+        collector.on('end', async (collected, reason) => {
+            if (!handled && reason === 'time' && collected.size === 0) {
+                // Disable components on timeout to avoid stale interactions
+                await interaction.editReply({ components: [] }).catch(() => {});
+            }
+        });
+        } catch (err) {
+            console.error('Error executing /setup:', err);
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor('#FF6961').setTitle('Setup Error').setDescription(err.message || 'An error occurred during setup.')],
+                    components: [],
+                }).catch(() => {});
+            } else {
+                await interaction.reply({ content: 'An error occurred while running /setup.', ephemeral: true }).catch(() => {});
+            }
+        }
     },
 };

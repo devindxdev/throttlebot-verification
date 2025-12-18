@@ -35,7 +35,6 @@ module.exports = {
                     { $set: { vehicleImages: updatedVehicleImages } }
                 );
 
-                console.log(`Replaced deleted image in vehicle: ${vehicle} for user: ${userId}`);
             }
         } catch (error) {
             console.error(`Error in messageDelete event: ${error.message}`);

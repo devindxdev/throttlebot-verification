@@ -5,9 +5,9 @@ const {
     ActionRowBuilder,
     ComponentType
 } = require('discord.js');
-const garageSchema = require('../../../mongodb_schema/garageSchema.js');
 const { errorEmbed } = require('../../utility.js');
 const { exitGlobal } = require('./options/exitGlobal.js');
+const { saveVehicleImages } = require('./services/vehicleService.js');
 
 async function manageImage(
     interaction,
@@ -146,10 +146,12 @@ async function manageImage(
             const removedImage = vehicleImages.splice(currentIndex, 1)[0];
 
             try {
-                await garageSchema.updateOne(
-                    { guildId, userId, vehicle: vehicleName },
-                    { $set: { vehicleImages } }
-                );
+                await saveVehicleImages({
+                    guildId,
+                    userId,
+                    vehicleName,
+                    images: vehicleImages,
+                });
             } catch (err) {
                 console.error('Failed to remove vehicle image:', err);
                 vehicleImages.splice(currentIndex, 0, removedImage);

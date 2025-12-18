@@ -8,10 +8,13 @@ const {
     TextInputBuilder,
     TextInputStyle
 } = require('discord.js');
-const garageSchema = require('../../../mongodb_schema/garageSchema.js');
 const { errorEmbed } = require('../../utility.js');
 const { exitGlobal } = require('./options/exitGlobal.js');
 const { backGlobal } = require('./options/backGlobal.js');
+const {
+    updateVehicleDescription,
+    clearVehicleDescription,
+} = require('./services/vehicleService.js');
 
 async function manageDescription(
     interaction,
@@ -144,10 +147,12 @@ async function manageDescription(
             }
 
             try {
-                await garageSchema.updateOne(
-                    { guildId, userId: userData.id, vehicle: vehicleName },
-                    { $set: { vehicleDescription: providedDescription } }
-                );
+                await updateVehicleDescription({
+                    guildId,
+                    userId: userData.id,
+                    vehicleName,
+                    description: providedDescription,
+                });
             } catch (err) {
                 await modalSubmission.reply({
                     embeds: [errorEmbed('Failed to update the description. Please try again later.', initiatorAvatar)],
@@ -217,10 +222,11 @@ async function manageDescription(
             }
 
             try {
-                await garageSchema.updateOne(
-                    { guildId, userId: userData.id, vehicle: vehicleName },
-                    { $set: { vehicleDescription: null } }
-                );
+                await clearVehicleDescription({
+                    guildId,
+                    userId: userData.id,
+                    vehicleName,
+                });
             } catch (err) {
                 await interaction.followUp({
                     embeds: [errorEmbed('Failed to reset the description. Please try again later.', initiatorAvatar)],

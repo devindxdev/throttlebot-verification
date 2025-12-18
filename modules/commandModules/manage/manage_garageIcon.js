@@ -8,12 +8,15 @@ const {
     LabelBuilder,
     FileUploadBuilder
 } = require('discord.js');
-const mongoose = require('mongoose');
-const userProfileSchema = require('../../../mongodb_schema/userProfileSchema.js');
 const { errorEmbed } = require('../../utility.js');
 const { garageIconExample } = require('../../constants.js');
 const { backGlobal } = require('./options/backGlobal.js');
 const { exitGlobal } = require('./options/exitGlobal.js');
+const {
+    findProfile,
+    upsertGarageIcon,
+    clearGarageIcon,
+} = require('./services/profileService.js');
 
 async function manageGarageIcon(
     interaction,
@@ -43,7 +46,7 @@ async function manageGarageIcon(
 
     let userProfile;
     try {
-        userProfile = await userProfileSchema.findOne({ userId }).lean();
+        userProfile = await findProfile(userId);
     } catch (err) {
         console.error('Failed to retrieve the user profile for manageGarageIcon:', err);
         await interaction.editReply({
@@ -146,7 +149,6 @@ async function manageGarageIcon(
         
             const uploadedFiles = modalSubmission.fields.getUploadedFiles('garageIconUpload');
             const uploadedFile = uploadedFiles?.values().next().value;
-            console.log(uploadedFile);
 
             if (!uploadedFile) {
                 console.warn('Garage icon modal submitted without an attachment.');
@@ -186,22 +188,8 @@ async function manageGarageIcon(
             }
 
             try {
-                if (userProfile) {
-                    await userProfileSchema.updateOne(
-                        { userId },
-                        { $set: { garageThumbnail: iconUrl } }
-                    );
-                } else {
-                    await userProfileSchema.create({
-                        _id: new mongoose.Types.ObjectId(),
-                        userId,
-                        premiumUser: false,
-                        premiumTier: 0,
-                        embedColor: null,
-                        garageThumbnail: iconUrl
-                    });
-                    userProfile = { userId, garageThumbnail: iconUrl };
-                }
+                await upsertGarageIcon(userId, iconUrl);
+                userProfile = userProfile || { userId };
             } catch (err) {
                 console.error('Failed to update garage icon in database:', err);
                 await modalSubmission.reply({
@@ -274,10 +262,7 @@ async function manageGarageIcon(
             }
 
             try {
-                await userProfileSchema.updateOne(
-                    { userId },
-                    { $set: { garageThumbnail: '' } }
-                );
+                await clearGarageIcon(userId);
             } catch (err) {
                 console.error('Failed to reset garage icon:', err);
                 await interaction.followUp({

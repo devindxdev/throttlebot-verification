@@ -11,6 +11,10 @@ const guildSchema = mongoose.Schema({
   customFooterIcon: String,
   passportEnabled: Boolean,
   passportGuildId: String,
+  geminiAnalysisEnabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 module.exports = mongoose.model("Guilds", guildSchema); 

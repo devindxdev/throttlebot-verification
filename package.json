@@ -33,6 +33,7 @@
     "moment": "^2.29.4",
     "mongoose": "^6.4.6",
     "node-fetch": "^3.3.2",
+    "openai": "^6.10.0",
     "validate.io-color-hexadecimal": "^1.0.0"
   }
 }

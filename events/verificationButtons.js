@@ -13,10 +13,9 @@ module.exports = {
     async execute(interaction) {
         if (interaction.type !== InteractionType.MessageComponent || !interaction.isButton()) return;
         const action = interaction.customId;
-        console.log(action);
 
         // Supported actions
-        const supportedActions = ['approveApplication', 'denyApplication', 'denyReadGuide'];
+        const supportedActions = ['approveApplication', 'denyApplication', 'denyReadGuide', 'autoOverrideDeny', 'autoOverrideApprove'];
 
         // Ignore interactions that aren't verification-related
         if (!supportedActions.includes(action)) return;
@@ -28,8 +27,6 @@ module.exports = {
             // Route the action to its corresponding handler
             switch (action) {
                 case 'approveApplication':
-                    console.log("siucc");
-
                     await handleApproval(interaction);
                     break;
 
@@ -39,6 +36,14 @@ module.exports = {
 
                 case 'denyReadGuide':
                     await handleGuideDenial(interaction);
+                    break;
+                case 'autoOverrideDeny':
+                    const handleOverrideDeny = require('../modules/eventModules/handleOverrideDeny.js');
+                    await handleOverrideDeny(interaction);
+                    break;
+                case 'autoOverrideApprove':
+                    const handleOverrideApprove = require('../modules/eventModules/handleOverrideApprove.js');
+                    await handleOverrideApprove(interaction);
                     break;
 
                 default:
