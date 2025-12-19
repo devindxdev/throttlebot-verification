@@ -11,7 +11,7 @@ const userProfileSchema = require('../../../mongodb_schema/userProfileSchema.js'
 const { obtainUserProfile } = require('../../database.js');
 const { greenColor } = require('../../constants.js');
 const { getEstimatedETA } = require('../../database.js');
-const runGeminiAnalysis = require('./geminiAnalysis.js');
+const runAiAnalysis = require('./aiAnalysis.js');
 
 module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfile) => {
     const { verificationChannelId, loggingChannelId, customFooterIcon } = guildProfile;
@@ -30,10 +30,10 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
 
     const eta = await getEstimatedETA(interaction.guild.id);
 
-    // Attempt Gemini auto-analysis if enabled
+    // Attempt AI auto-analysis if enabled
     if (guildProfile.geminiAnalysisEnabled) {
         try {
-            const analysisResult = await runGeminiAnalysis(interaction, vehicleName, vehicleAttachment, guildProfile);
+            const analysisResult = await runAiAnalysis(interaction, vehicleName, vehicleAttachment, guildProfile);
             if (analysisResult?.success) {
                 const { confidence = 0, requirementsMet, vehicleMatch } = analysisResult.analysis || {};
                 // Auto-approve when very confident and all requirements are met
@@ -64,10 +64,10 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
                     return;
                 }
             } else {
-                console.warn('Gemini analysis failed or returned unsuccessful result:', analysisResult?.error);
+                console.warn('AI analysis failed or returned unsuccessful result:', analysisResult?.error);
             }
         } catch (err) {
-            console.error('Gemini analysis threw an error, falling back to manual review:', err);
+            console.error('AI analysis threw an error, falling back to manual review:', err);
         }
     }
 
@@ -212,7 +212,7 @@ async function autoApproveApplication({ interaction, guildProfile, vehicleName, 
     // Create override message for staff
     const appEmbed = new EmbedBuilder()
         .setAuthor({ name: 'Vehicle Verification - Auto Approved', iconURL: initiator.displayAvatarURL({ dynamic: true }) })
-        .setDescription('This application was automatically approved by Gemini analysis. Staff may override below if needed.')
+        .setDescription('This application was automatically approved by AI analysis. Staff may override below if needed.')
         .addFields(
             { name: 'Vehicle', value: vehicleName, inline: true },
             { name: 'Owner', value: `${initiatorTag} | <@${initiatorId}>`, inline: true },
@@ -245,7 +245,7 @@ async function autoApproveApplication({ interaction, guildProfile, vehicleName, 
         submittedOn: new Date().toISOString(),
         applicationMessageId: message.id,
         decision: 'approved',
-        decidedBy: 'gemini-auto',
+        decidedBy: 'ai-auto',
         decidedOn: new Date().toISOString(),
     });
     await application.save();
@@ -257,7 +257,7 @@ async function autoApproveApplication({ interaction, guildProfile, vehicleName, 
 
     // Log auto approval
     if (loggingChannel) {
-        const logEmbed = EmbedBuilder.from(appEmbed).setDescription(`Auto-approved in <#${verificationChannel.id}>. Gemini confidence >= 90%.`);
+        const logEmbed = EmbedBuilder.from(appEmbed).setDescription(`Auto-approved in <#${verificationChannel.id}>. AI confidence >= 90%.`);
         await loggingChannel.send({ embeds: [logEmbed] }).catch(() => {});
     }
 
@@ -285,7 +285,7 @@ async function autoDenyApplication({ interaction, guildProfile, vehicleName, veh
 
     const appEmbed = new EmbedBuilder()
         .setAuthor({ name: 'Vehicle Verification - Auto Denied', iconURL: initiator.displayAvatarURL({ dynamic: true }) })
-        .setDescription('This application was automatically denied by Gemini analysis. Staff can override below if this is incorrect.')
+        .setDescription('This application was automatically denied by AI analysis. Staff can override below if this is incorrect.')
         .addFields(
             { name: 'Vehicle', value: vehicleName, inline: true },
             { name: 'Owner', value: `${initiatorTag} | <@${initiatorId}>`, inline: true },
@@ -322,7 +322,7 @@ async function autoDenyApplication({ interaction, guildProfile, vehicleName, veh
         submittedOn: new Date().toISOString(),
         applicationMessageId: message.id,
         decision: 'denied',
-        decidedBy: 'gemini-auto',
+        decidedBy: 'ai-auto',
         decidedOn: new Date().toISOString(),
     });
     await application.save();
@@ -330,7 +330,7 @@ async function autoDenyApplication({ interaction, guildProfile, vehicleName, veh
     // Log auto denial
     if (loggingChannel) {
         const logEmbed = EmbedBuilder.from(appEmbed).setDescription(
-            `Auto-denied in <#${verificationChannel.id}>. Gemini confidence >= 90%.`
+            `Auto-denied in <#${verificationChannel.id}>. AI confidence >= threshold.`
         );
         await loggingChannel.send({ embeds: [logEmbed] }).catch(() => {});
     }

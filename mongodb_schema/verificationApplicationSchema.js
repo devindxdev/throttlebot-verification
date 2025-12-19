@@ -1,19 +1,36 @@
 const mongoose = require('mongoose');
 
-const verificationApplication = mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
-  guildId: String,
-  userId: String,
-  vehicle: String,
-  vehicleImageURL: String,
-  vehicleImageProxyURL: String,
-  vehicleImageName: String,
-  status: String,
-  submittedOn: String,
-  applicationMessageId: String,
-  decision: String,
-  decidedBy: String,
-  decidedOn: String
-});
+/**
+ * Verification application records with decision tracking.
+ */
+const verificationApplication = new mongoose.Schema(
+  {
+    guildId: { type: String, required: true, index: true },
+    userId: { type: String, required: true, index: true },
+    vehicle: { type: String, required: true },
+    vehicleImageURL: { type: String, default: null },
+    vehicleImageProxyURL: { type: String, default: null },
+    vehicleImageName: { type: String, default: null },
+    status: {
+      type: String,
+      enum: ['open', 'closed', 'auto-approved', 'auto-denied'],
+      required: true,
+      default: 'open',
+      index: true,
+    },
+    submittedOn: { type: Date, default: Date.now },
+    applicationMessageId: { type: String, required: true, index: true },
+    decision: { type: String, default: null },
+    decidedBy: { type: String, default: null },
+    decidedOn: { type: Date, default: null },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+    collection: 'verification applications',
+  }
+);
 
-module.exports = mongoose.model("Verification Applications", verificationApplication); 
+verificationApplication.index({ guildId: 1, userId: 1, vehicle: 1, status: 1 });
+
+module.exports = mongoose.model('Verification Applications', verificationApplication);

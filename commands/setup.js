@@ -18,7 +18,7 @@ const handleGuideChannel = require('../modules/commandModules/setup/handleGuideC
 const handleLoggingChannel = require('../modules/commandModules/setup/handleLoggingChannel.js');
 const handleVerifiedRole = require('../modules/commandModules/setup/handleVerifiedRole.js');
 const handleEmbedIcon = require('../modules/commandModules/setup/handleEmbedIcon.js');
-const handleGeminiAnalysis = require('../modules/commandModules/setup/handleGeminiAnalysis.js');
+const handleAiVerification = require('../modules/commandModules/setup/handleAiVerification.js');
 const exitSetup = require('../modules/commandModules/setup/exitSetup.js');
 
 /**
@@ -119,13 +119,13 @@ module.exports = {
                 inline: false,
             }
 			,
-			{
-				name: '🤖 Gemini Analysis',
-				value: guildProfile.geminiAnalysisEnabled
-					? '**Enabled**\nApplications will be auto-reviewed by Gemini.'
-					: '**Disabled**\nAuto-analysis of applications is turned off.',
-				inline: false,
-			}
+				{
+					name: '🤖 AI Verification',
+					value: guildProfile.geminiAnalysisEnabled
+						? '**Enabled**\nApplications will be auto-reviewed by AI before manual review.'
+						: '**Disabled**\nAuto-analysis of applications is turned off.',
+					inline: false,
+				}
 		)
 		.setColor('#FFFCFF')
 		.setFooter({ text: footerText });
@@ -167,11 +167,11 @@ module.exports = {
 				description: 'Set a custom icon for embed footers.',
 				value: 'embed_icon',
 			},
-			{
-				label: '🤖 Gemini Analysis',
-				description: 'Enable or disable automatic Gemini analysis.',
-				value: 'gemini_analysis',
-			},
+				{
+					label: '🤖 AI Verification',
+					description: 'Enable or disable automatic AI analysis.',
+					value: 'ai_verification',
+				},
 			{
 				label: '❌ Exit',
 				description: 'Exit the setup process without making changes.',
@@ -228,10 +228,10 @@ module.exports = {
                     await handleEmbedIcon(menuInteraction, guildProfile);
                     handled = true;
                     break;
-				case 'gemini_analysis':
+				case 'ai_verification':
 					collector.stop(); 
-					await handleGeminiAnalysis(menuInteraction, guildProfile);
-                    handled = true;
+					await handleAiVerification(menuInteraction, guildProfile);
+					handled = true;
 					break;
                 case 'exit':
                     await exitSetup(menuInteraction);

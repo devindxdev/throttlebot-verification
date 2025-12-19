@@ -6,9 +6,9 @@ module.exports = async (interaction, guildProfile) => {
     await interaction.deferUpdate();
 
     const embed = new EmbedBuilder()
-        .setTitle('Gemini Analysis')
+        .setTitle('AI Verification')
         .setDescription(
-            'Enable or disable automatic Gemini analysis for verification applications. When enabled, incoming applications will be auto-reviewed by Gemini before manual review.'
+            'Enable or disable automatic AI analysis for verification applications. When enabled, incoming applications will be auto-reviewed by AI before manual review.'
         )
         .addFields({
             name: 'Current Status',
@@ -18,17 +18,17 @@ module.exports = async (interaction, guildProfile) => {
 
     const controls = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-            .setCustomId('gemini_enable')
+            .setCustomId('ai_enable')
             .setLabel('Enable')
             .setStyle(ButtonStyle.Success)
             .setDisabled(!!guildProfile.geminiAnalysisEnabled),
         new ButtonBuilder()
-            .setCustomId('gemini_disable')
+            .setCustomId('ai_disable')
             .setLabel('Disable')
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(!guildProfile.geminiAnalysisEnabled),
         new ButtonBuilder()
-            .setCustomId('gemini_back')
+            .setCustomId('ai_back')
             .setLabel('Back')
             .setStyle(ButtonStyle.Secondary)
     );
@@ -44,26 +44,26 @@ module.exports = async (interaction, guildProfile) => {
 
     collector.on('collect', async (btn) => {
         const id = btn.customId;
-        if (id === 'gemini_back') {
+        if (id === 'ai_back') {
             await btn.deferUpdate();
             const setupCommand = require('../../../commands/setup.js');
             await setupCommand.execute(interaction);
             return;
         }
 
-        const newValue = id === 'gemini_enable';
+        const newValue = id === 'ai_enable';
         try {
             await guildProfileSchema.updateOne(
                 { guildId: guildProfile.guildId },
                 { $set: { geminiAnalysisEnabled: newValue } }
             );
         } catch (err) {
-            await btn.reply({ embeds: [errorEmbed('Failed to update Gemini analysis setting.', interaction.user.displayAvatarURL({ dynamic: true }))], ephemeral: true });
+            await btn.reply({ embeds: [errorEmbed('Failed to update AI verification setting.', interaction.user.displayAvatarURL({ dynamic: true }))], ephemeral: true });
             return;
         }
 
         await btn.reply({
-            content: `Gemini analysis has been ${newValue ? 'enabled' : 'disabled'}.`,
+            content: `AI verification has been ${newValue ? 'enabled' : 'disabled'}.`,
             ephemeral: true,
         });
 

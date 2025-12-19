@@ -163,8 +163,14 @@ module.exports = async function handleApproval(interaction) {
                 iconURL: footerIcon,
             });
 
-        const logChannel = await interaction.guild.channels.fetch(loggingChannelId);
-        await logChannel.send({ embeds: [logEmbed] });
+        try {
+            const logChannel = await interaction.guild.channels.fetch(loggingChannelId);
+            if (logChannel) {
+                await logChannel.send({ embeds: [logEmbed] });
+            }
+        } catch (logErr) {
+            console.warn('Failed to log approval:', logErr.message);
+        }
 
         // Final confirmation
         await interaction.followUp({

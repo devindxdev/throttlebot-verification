@@ -1,12 +1,21 @@
 const mongoose = require('mongoose');
 
-const profileSchema = mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
-  userId: String,
-  premiumUser: Boolean,
-  premiumTier: Number,
-  embedColor: String,
-  garageThumbnail: String
-});
+/**
+ * Per-user profile data (premium status, preferences).
+ */
+const profileSchema = new mongoose.Schema(
+  {
+    userId: { type: String, required: true, index: true, unique: true },
+    premiumUser: { type: Boolean, default: false },
+    premiumTier: { type: Number, default: 0, min: 0 },
+    embedColor: { type: String, default: '' },
+    garageThumbnail: { type: String, default: '' },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+    collection: 'users',
+  }
+);
 
-module.exports = mongoose.model("Users", profileSchema); 
+module.exports = mongoose.model('Users', profileSchema);
