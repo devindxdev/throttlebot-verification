@@ -76,6 +76,9 @@ module.exports = async (interaction, selectedOption, userGarage, guildProfile, p
                 const collector = replyMessage.createMessageComponentCollector({
                     componentType: ComponentType.Button,
                     time: 600000, // 10 minutes
+                    filter: (btnInteraction) =>
+                        btnInteraction.user.id === interaction.user.id &&
+                        btnInteraction.message.id === replyMessage.id,
                 });
 
                 collector.on('collect', async (buttonInteraction) => {

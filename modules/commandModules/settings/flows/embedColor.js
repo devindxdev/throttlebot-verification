@@ -48,9 +48,13 @@ module.exports = async function embedColorFlow(triggerInteraction, ctx) {
 
     await interaction.editReply({ embeds: [buildEmbed()], components: [controls] });
 
+    const settingsMessage = await interaction.fetchReply().catch(() => null);
+
     const collector = interaction.channel.createMessageComponentCollector({
         componentType: ComponentType.Button,
-        filter: (i) => i.user.id === initiator.id,
+        filter: (i) =>
+            i.user.id === initiator.id &&
+            (!settingsMessage || i.message.id === settingsMessage.id),
         time: 120000,
     });
 

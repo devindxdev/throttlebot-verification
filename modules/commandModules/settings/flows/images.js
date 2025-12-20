@@ -79,9 +79,13 @@ module.exports = async function imagesFlow(triggerInteraction, ctx) {
 
     await interaction.editReply({ embeds: [buildEmbed()], components: [buildRow()] });
 
+    const settingsMessage = await interaction.fetchReply().catch(() => null);
+
     const collector = interaction.channel.createMessageComponentCollector({
         componentType: ComponentType.Button,
-        filter: (i) => i.user.id === initiator.id,
+        filter: (i) =>
+            i.user.id === initiator.id &&
+            (!settingsMessage || i.message.id === settingsMessage.id),
         time: 120000,
     });
 
@@ -215,7 +219,8 @@ module.exports = async function imagesFlow(triggerInteraction, ctx) {
                 return;
             }
 
-            vehicleImages.push(iconUrl);
+            const insertIndex = vehicleImages.length === 0 ? 0 : currentIndex + 1;
+            vehicleImages.splice(insertIndex, 0, iconUrl);
             try {
                 await saveVehicleImages({
                     guildId: guild.id,
@@ -224,7 +229,7 @@ module.exports = async function imagesFlow(triggerInteraction, ctx) {
                     images: vehicleImages,
                 });
             } catch (err) {
-                vehicleImages.pop();
+                vehicleImages.splice(insertIndex, 1);
                 await submission.reply({
                     embeds: [errorEmbed('Failed to save the image. Please try again later.', initiatorAvatar)],
                     ephemeral: true,
@@ -232,7 +237,7 @@ module.exports = async function imagesFlow(triggerInteraction, ctx) {
                 return;
             }
 
-            currentIndex = vehicleImages.length - 1;
+            currentIndex = insertIndex;
             selectedVehicle.vehicleImages = [...vehicleImages];
 
             const successEmbed = new EmbedBuilder()

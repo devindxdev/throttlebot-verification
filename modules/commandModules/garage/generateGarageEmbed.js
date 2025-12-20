@@ -64,7 +64,10 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
             const collector = garageMessage.createMessageComponentCollector({
                 componentType: ComponentType.StringSelect,
                 time: 60000, // Collector active for 60 seconds
-                filter: (i) => i.user.id === interaction.user.id && i.customId === 'garage_menu',
+                filter: (i) =>
+                    i.user.id === interaction.user.id &&
+                    i.customId === 'garage_menu' &&
+                    i.message.id === garageMessage.id,
             });
 
             collector.on('collect', async (menuInteraction) => {
