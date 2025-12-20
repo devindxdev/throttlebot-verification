@@ -5,37 +5,40 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
     try {
         // Prepare the confirmation embed
         const confirmationEmbed = new EmbedBuilder()
-        .setAuthor({ 
-            name: 'Vehicle Verification - Confirmation', 
-            iconURL: initiatorAvatar 
-        })
-        .setDescription(
-            `Thank you for providing your vehicle details! Please review the information below before submitting your application.`
-        )
-        .addFields(
-            {
-                name: 'Vehicle Name',
-                value: `${vehicleName}`,
-                inline: false,
-            },
-            {
-                name: 'Requirements',
-                value: `1. Ensure the vehicle name is correct.\n` +
-                        `2. Make sure your application meets the requirements listed in <#${guildProfile.guideChannelId}> otherwise it will be rejected.`,
-                inline: false,
-            },
-            {
-                name: 'Next Steps',
-                value: `If everything looks good, click **Confirm** to submit your application. If you want to cancel, click **Cancel**.`,
-                inline: false,
-            }
-        )
-        .setImage(vehicleAttachment.url) // Display the uploaded vehicle image
-        .setColor('#FFFCFF')
-        .setFooter({
-            text: `${interaction.guild.name} • Vehicle Verification`,
-            iconURL: guildProfile.customFooterIcon || interaction.guild.iconURL({ dynamic: true }),
-        });
+            .setAuthor({ 
+                name: 'Vehicle Verification - Confirmation', 
+                iconURL: initiatorAvatar 
+            })
+            .setDescription(
+                `Thank you for providing your vehicle details! Please review the information below before submitting your application.`
+            )
+            .addFields(
+                {
+                    name: 'Vehicle Name',
+                    value: `${vehicleName}`,
+                    inline: false,
+                },
+                {
+                    name: 'Requirements',
+                    value: `1. Ensure the vehicle name is correct.\n` +
+                            `2. Make sure your application meets the requirements listed in <#${guildProfile.guideChannelId}> otherwise it will be rejected.`,
+                    inline: false,
+                },
+                {
+                    name: 'Next Steps',
+                    value: `If everything looks good, click **Confirm** to submit your application. If you want to cancel, click **Cancel**.`,
+                    inline: false,
+                }
+            )
+            .setColor('#FFFCFF')
+            .setFooter({
+                text: `${interaction.guild.name} • Vehicle Verification`,
+                iconURL: guildProfile.customFooterIcon || interaction.guild.iconURL({ dynamic: true }),
+            });
+
+        if (vehicleAttachment.contentType?.includes('image')) {
+            confirmationEmbed.setImage(vehicleAttachment.url); // Display the uploaded vehicle image
+        }
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()

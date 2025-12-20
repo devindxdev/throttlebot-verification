@@ -1,7 +1,8 @@
 const { errorEmbed } = require('../../utility.js');
 const { 
     obtainAllUserVehicles, 
-    obtainAllOpenUserApplications 
+    obtainAllOpenUserApplications,
+    obtainUserProfile,
 } = require('../../database.js');
 
 module.exports = async (interaction, vehicleAttachment, vehicleName, initiatorId, guildProfile) => {
@@ -13,24 +14,30 @@ module.exports = async (interaction, vehicleAttachment, vehicleName, initiatorId
 
     try {
         // Ensure all necessary channels are configured
-        if (!verificationChannelId || !guideChannelId || !loggingChannelId) {
+        if (!verificationChannelId || !guideChannelId) {
             throw new Error(
                 'This server has not been set up properly. Please ask the moderation team to use the `/setup` command.'
             );
         }
 
-        // Validate file size and type
+        // Validate file size and type (allow images and videos)
         const { size, contentType, name } = vehicleAttachment;
+        const isImage = contentType?.includes('image');
+        const isVideo = contentType?.includes('video');
         
-        if (size > 8_000_000) {
-            throw new Error('The file size exceeds the 8MB limit.');
+        if (!isImage && !isVideo) {
+            throw new Error('Unsupported file type. Please upload an image or a short video.');
         }
 
-        if (contentType && !contentType.includes('image')) {
-            throw new Error('The provided file is not a valid image.');
+        if (isImage && size > 8_000_000) {
+            throw new Error('The image size exceeds the 8MB limit.');
         }
 
-        if (name.toLowerCase().includes('heic')) {
+        if (isVideo && size > 25_000_000) {
+            throw new Error('The video size exceeds the 25MB limit.');
+        }
+
+        if (isImage && name.toLowerCase().includes('heic')) {
             throw new Error('HEIC images are not supported. Please upload a different format.');
         }
 
@@ -41,6 +48,12 @@ module.exports = async (interaction, vehicleAttachment, vehicleName, initiatorId
 
         if (vehicleName.length < 2) {
             throw new Error('Vehicle name is too short. Please use at least 2 characters.');
+        }
+
+        // Block users who are banned from verification
+        const userProfile = await obtainUserProfile(initiatorId);
+        if (userProfile?.verificationBanned) {
+            throw new Error('You are banned from submitting verification applications. Please contact staff if you believe this is a mistake.');
         }
 
         // Check for existing vehicles in the user's garage

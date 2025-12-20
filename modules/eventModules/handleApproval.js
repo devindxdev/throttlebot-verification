@@ -35,21 +35,6 @@ module.exports = async function handleApproval(interaction) {
         if (!applicationData) throw new Error('No open verification application found for this message.');
         const { userId, vehicle, vehicleImageProxyURL, vehicleImageURL } = applicationData;
 
-        // Create a new verified ride in the garage
-        const newVerifiedRide = new garageSchema({
-            _id: mongoose.Types.ObjectId(),
-            guildId,
-            userId,
-            vehicle,
-            vehicleImages: [],
-            vehicleDescription: null,
-            vehicleAddedDate: todaysDate,
-            verificationImageLink: vehicleImageProxyURL,
-            embedColor: null,
-        });
-
-        await newVerifiedRide.save();
-
         // Create or update the user's profile
         let userProfile = await obtainUserProfile(userId);
         if (!userProfile) {
@@ -77,9 +62,32 @@ module.exports = async function handleApproval(interaction) {
             }
         );
 
+        // Create a new verified ride in the garage if it doesn't exist
+        const existingRide = await garageSchema.findOne({ guildId, userId, vehicle });
+        if (!existingRide) {
+            const newVerifiedRide = new garageSchema({
+                _id: mongoose.Types.ObjectId(),
+                guildId,
+                userId,
+                vehicle,
+                vehicleImages: [],
+                vehicleDescription: null,
+                vehicleAddedDate: todaysDate,
+                verificationImageLink: vehicleImageProxyURL,
+                embedColor: null,
+            });
+            await newVerifiedRide.save();
+        }
+
         // Update the embed in the interaction message
         const vApplicationEmbed = EmbedBuilder.from(interaction.message.embeds[0]);
-        vApplicationEmbed.data.fields[3].value = 'Verified Successfully';
+        const fields = vApplicationEmbed.data.fields || [];
+        const statusField = fields.find((f) => f.name.toLowerCase().includes('status'));
+        if (statusField) {
+            statusField.value = 'Verified Successfully';
+        } else {
+            vApplicationEmbed.addFields({ name: 'Status', value: 'Verified Successfully' });
+        }
         vApplicationEmbed.setColor(parseInt(greenColor.replace('#', ''), 16));
         vApplicationEmbed.addFields({
             name: 'Decided By',

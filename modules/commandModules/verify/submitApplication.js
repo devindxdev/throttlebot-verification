@@ -15,6 +15,9 @@ const runAiAnalysis = require('./aiAnalysis.js');
 
 module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfile) => {
     const { verificationChannelId, loggingChannelId, customFooterIcon } = guildProfile;
+    const attachmentType = vehicleAttachment.contentType || '';
+    const isImage = attachmentType.includes('image');
+    const isVideo = attachmentType.includes('video');
 
     const verificationChannel = await interaction.guild.channels.fetch(verificationChannelId);
     if (!verificationChannel) {
@@ -25,19 +28,40 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
         ? await interaction.guild.channels.fetch(loggingChannelId).catch(() => null)
         : null;
 
+    // Will be populated if AI analysis runs
+    let analysisSummary = null;
+
     const initiator = interaction.user;
     const { id: initiatorId, tag: initiatorTag } = initiator;
 
     const eta = await getEstimatedETA(interaction.guild.id);
 
     // Attempt AI auto-analysis if enabled
-    if (guildProfile.geminiAnalysisEnabled) {
+    if (guildProfile.geminiAnalysisEnabled && isImage) {
         try {
             const analysisResult = await runAiAnalysis(interaction, vehicleName, vehicleAttachment, guildProfile);
             if (analysisResult?.success) {
-                const { confidence = 0, requirementsMet, vehicleMatch } = analysisResult.analysis || {};
-                // Auto-approve when very confident and all requirements are met
-                if (requirementsMet && confidence >= 90) {
+                const { confidence = 0, requirementsMet, vehicleMatch, estimatedValueUSD } = analysisResult.analysis || {};
+                const parsedValue = Number(estimatedValueUSD);
+                const estimatedValue = Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : null;
+
+                // High-value rules
+                if (estimatedValue !== null && estimatedValue >= 80000) {
+                    await handleHighValueRequiresVideo({
+                        interaction,
+                        vehicleName,
+                        vehicleAttachment,
+                        customFooterIcon,
+                        guildProfile,
+                        estimatedValue,
+                    });
+                    return;
+                }
+
+                analysisSummary = summarizeAnalysis({ confidence, requirementsMet, vehicleMatch, estimatedValue });
+
+                // Auto-approve when very confident and all requirements are met and not high-value
+                if (requirementsMet && confidence >= 90 && estimatedValue !== null && estimatedValue < 50000) {
                     await autoApproveApplication({
                         interaction,
                         guildProfile,
@@ -81,15 +105,23 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
             .addFields(
                 { name: 'Vehicle', value: vehicleName, inline: true },
                 { name: 'Owner', value: `${initiatorTag} | <@${initiatorId}>`, inline: true },
-                { name: 'Image Name', value: `[${vehicleAttachment.name}](${vehicleAttachment.proxyURL})`, inline: true },
+                { name: 'Attachment', value: `[${vehicleAttachment.name}](${vehicleAttachment.url}) (${attachmentType || 'file'})`, inline: true },
                 { name: 'Status', value: 'Due for verification', inline: true }
             )
-            .setImage(vehicleAttachment.url)
             .setColor('#FFFCFF')
             .setFooter({
                 text: `${interaction.guild.name} • Vehicle Verification`,
                 iconURL: customFooterIcon || interaction.guild.iconURL({ dynamic: true }),
             });
+
+        // Add AI summary to help staff if we have it
+        if (analysisSummary) {
+            vApplication.addFields({
+                name: 'AI Summary',
+                value: analysisSummary,
+            });
+        }
+        if (isImage) vApplication.setImage(vehicleAttachment.url);
 
         const approveButton = new ButtonBuilder()
             .setCustomId(`approveApplication`)
@@ -106,7 +138,12 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
             .setLabel('Read The Guide')
             .setStyle(ButtonStyle.Danger);
 
-        const row = new ActionRowBuilder().addComponents(approveButton, denyButton, denyGuideButton);
+        const banButton = new ButtonBuilder()
+            .setCustomId('banApplication')
+            .setLabel('Ban')
+            .setStyle(ButtonStyle.Danger);
+
+        const row = new ActionRowBuilder().addComponents(approveButton, denyButton, denyGuideButton, banButton);
 
         const applicationMessage = await verificationChannel.send({
             embeds: [vApplication],
@@ -351,4 +388,51 @@ async function autoDenyApplication({ interaction, guildProfile, vehicleName, veh
         });
 
     await interaction.editReply({ embeds: [denialEmbed], components: [] });
+}
+
+async function handleHighValueRequiresVideo({ interaction, vehicleName, vehicleAttachment, customFooterIcon, guildProfile, estimatedValue }) {
+    const embed = new EmbedBuilder()
+        .setAuthor({ name: 'High-Value Verification Required', iconURL: interaction.user.displayAvatarURL({ dynamic: true }) })
+        .setDescription(
+            'This vehicle appears to be high value. For security, please re-submit using a short video instead of an image that clearly shows:\n' +
+            '- The vehicle and keys\n' +
+            '- A handwritten note with your Discord username and server name\n' +
+            '- Walk-around view of the vehicle'
+        )
+        .addFields(
+            { name: 'Vehicle', value: vehicleName, inline: true },
+            { name: 'Estimated Value', value: formatCurrency(estimatedValue), inline: true }
+        )
+        .setColor('#FFB347')
+        .setFooter({
+            text: `${interaction.guild.name} • Vehicle Verification`,
+            iconURL: customFooterIcon || interaction.guild.iconURL({ dynamic: true }),
+        });
+
+    await interaction.editReply({ embeds: [embed], components: [] });
+
+    // Optional log to staff
+    if (guildProfile.loggingChannelId) {
+        interaction.guild.channels.fetch(guildProfile.loggingChannelId).then((channel) => {
+            channel.send({
+                embeds: [
+                    EmbedBuilder.from(embed).setDescription(
+                        'High-value verification requested. User was asked to re-submit with a video.'
+                    ),
+                ],
+            }).catch(() => {});
+        }).catch(() => {});
+    }
+}
+
+function summarizeAnalysis({ confidence, requirementsMet, vehicleMatch, estimatedValue }) {
+    const req = requirementsMet === true ? '✅ Requirements met' : requirementsMet === false ? '❌ Requirements failed' : '⚠️ Unknown';
+    const match = vehicleMatch === true ? '✅ Vehicle matches' : vehicleMatch === false ? '❌ Vehicle mismatch' : '⚠️ Unknown';
+    const value = Number.isFinite(estimatedValue) && estimatedValue > 0 ? `Est. value: ${formatCurrency(estimatedValue)}` : 'Est. value: n/a';
+    return `${req}\n${match}\nConfidence: ${confidence}%\n${value}`;
+}
+
+function formatCurrency(value) {
+    const numeric = Number(value) || 0;
+    return `$${numeric.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 }

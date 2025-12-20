@@ -10,6 +10,7 @@ const profileSchema = new mongoose.Schema(
     premiumTier: { type: Number, default: 0, min: 0 },
     embedColor: { type: String, default: '' },
     garageThumbnail: { type: String, default: '' },
+    verificationBanned: { type: Boolean, default: false },
   },
   {
     timestamps: true,

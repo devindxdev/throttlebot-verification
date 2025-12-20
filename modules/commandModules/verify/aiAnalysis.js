@@ -38,7 +38,9 @@ Return JSON with these keys:
   "vehicleMatch": true/false,           // whether "${vehicleName}" matches the vehicle shown
   "issues": ["..."],                    // list of problems (empty if none)
   "feedback": "...",                    // concise guidance
-  "confidence": 0-100                   // overall confidence score
+  "confidence": 0-100,                  // overall confidence score
+  "estimatedValueUSD": <number>,        // estimated market value in USD (numeric)
+  "estimatedValueConfidence": 0-100     // confidence in the value estimate
 }
 `;
 

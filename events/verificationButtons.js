@@ -15,7 +15,7 @@ module.exports = {
         const action = interaction.customId;
 
         // Supported actions
-        const supportedActions = ['approveApplication', 'denyApplication', 'denyReadGuide', 'autoOverrideDeny', 'autoOverrideApprove'];
+        const supportedActions = ['approveApplication', 'denyApplication', 'denyReadGuide', 'banApplication', 'autoOverrideDeny', 'autoOverrideApprove'];
 
         // Ignore interactions that aren't verification-related
         if (!supportedActions.includes(action)) return;
@@ -36,6 +36,10 @@ module.exports = {
 
                 case 'denyReadGuide':
                     await handleGuideDenial(interaction);
+                    break;
+                case 'banApplication':
+                    const handleVerificationBan = require('../modules/eventModules/handleVerificationBan.js');
+                    await handleVerificationBan(interaction);
                     break;
                 case 'autoOverrideDeny':
                     const handleOverrideDeny = require('../modules/eventModules/handleOverrideDeny.js');
