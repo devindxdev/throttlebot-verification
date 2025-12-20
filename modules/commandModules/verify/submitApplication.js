@@ -3,6 +3,10 @@ const {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
+    ComponentType,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
 } = require('discord.js');
 const mongoose = require('mongoose');
 const verificationSchema = require('../../../mongodb_schema/verificationApplicationSchema.js');
@@ -145,10 +149,16 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
 
         const row = new ActionRowBuilder().addComponents(approveButton, denyButton, denyGuideButton, banButton);
 
-        const applicationMessage = await verificationChannel.send({
-            embeds: [vApplication],
-            components: [row],
-        });
+        const applicationMessage = await verificationChannel.send(
+            isVideo
+                ? {
+                    content: `Vehicle Verification Video for: ${vehicleName}`,
+                    files: [{ attachment: vehicleAttachment.url, name: vehicleAttachment.name }],
+                    embeds: [vApplication],
+                    components: [row],
+                }
+                : { embeds: [vApplication], components: [row] }
+        );
 
         // Save application to the database
         const application = new verificationSchema({
@@ -322,7 +332,7 @@ async function autoDenyApplication({ interaction, guildProfile, vehicleName, veh
 
     const appEmbed = new EmbedBuilder()
         .setAuthor({ name: 'Vehicle Verification - Auto Denied', iconURL: initiator.displayAvatarURL({ dynamic: true }) })
-        .setDescription('This application was automatically denied by AI analysis. Staff can override below if this is incorrect.')
+        .setDescription('This application was automatically denied by AI analysis.')
         .addFields(
             { name: 'Vehicle', value: vehicleName, inline: true },
             { name: 'Owner', value: `${initiatorTag} | <@${initiatorId}>`, inline: true },
@@ -336,17 +346,7 @@ async function autoDenyApplication({ interaction, guildProfile, vehicleName, veh
             iconURL: guildProfile.customFooterIcon || interaction.guild.iconURL({ dynamic: true }),
         });
 
-    const overrideApproveButton = new ButtonBuilder()
-        .setCustomId('autoOverrideApprove')
-        .setLabel('Override: Approve')
-        .setStyle(ButtonStyle.Success);
-
-    const message = await verificationChannel.send({
-        embeds: [appEmbed],
-        components: [new ActionRowBuilder().addComponents(overrideApproveButton)],
-    });
-
-    // Save application record with auto-denied status for potential override
+    // Save application record with auto-denied status (no posting to verification channel yet)
     const application = new verificationSchema({
         _id: new mongoose.Types.ObjectId(),
         guildId,
@@ -357,17 +357,17 @@ async function autoDenyApplication({ interaction, guildProfile, vehicleName, veh
         vehicleImageName: vehicleAttachment.name,
         status: 'auto-denied',
         submittedOn: new Date().toISOString(),
-        applicationMessageId: message.id,
+        applicationMessageId: null,
         decision: 'denied',
         decidedBy: 'ai-auto',
         decidedOn: new Date().toISOString(),
     });
     await application.save();
 
-    // Log auto denial
+    // Log auto denial (staff visibility only)
     if (loggingChannel) {
         const logEmbed = EmbedBuilder.from(appEmbed).setDescription(
-            `Auto-denied in <#${verificationChannel.id}>. AI confidence >= threshold.`
+            `Auto-denied by AI. Not sent to verification channel unless appealed.`
         );
         await loggingChannel.send({ embeds: [logEmbed] }).catch(() => {});
     }
@@ -379,7 +379,10 @@ async function autoDenyApplication({ interaction, guildProfile, vehicleName, veh
             'Your verification was automatically denied because the image did not meet the requirements.\n' +
             'If you believe this is incorrect, staff can override the decision, or you can re-submit with a corrected image.'
         )
-        .addFields({ name: 'Vehicle', value: vehicleName, inline: true })
+        .addFields(
+            { name: 'Vehicle', value: vehicleName, inline: true },
+            { name: 'Reason', value: reason || 'Requirements were not met.' }
+        )
         .setColor('#FF6961')
         .setThumbnail(vehicleAttachment.url)
         .setFooter({
@@ -387,7 +390,108 @@ async function autoDenyApplication({ interaction, guildProfile, vehicleName, veh
             iconURL: guildProfile.customFooterIcon || interaction.guild.iconURL({ dynamic: true }),
         });
 
-    await interaction.editReply({ embeds: [denialEmbed], components: [] });
+    const appealButton = new ButtonBuilder()
+        .setCustomId('appealAutoDeny')
+        .setLabel('Appeal')
+        .setStyle(ButtonStyle.Secondary);
+
+    await interaction.editReply({ embeds: [denialEmbed], components: [new ActionRowBuilder().addComponents(appealButton)] });
+
+    // Collect appeal from the user
+    if (interaction.channel) {
+        const collector = interaction.channel.createMessageComponentCollector({
+            componentType: ComponentType.Button,
+            time: 60000,
+            filter: (btn) => btn.user.id === initiatorId && btn.customId === 'appealAutoDeny',
+        });
+
+        collector.on('collect', async (btn) => {
+            const modal = new ModalBuilder()
+                .setCustomId('appealAutoDenyModal')
+                .setTitle('Appeal Auto-Denial');
+            const reasonInput = new TextInputBuilder()
+                .setCustomId('appeal_reason')
+                .setLabel('Why should this be approved?')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(true)
+                .setMaxLength(1000)
+                .setPlaceholder('Note: Fake appeals may result in disciplinary action.');
+            modal.addComponents(new ActionRowBuilder().addComponents(reasonInput));
+
+            await btn.showModal(modal);
+
+            try {
+                const submission = await btn.awaitModalSubmit({
+                    time: 60000,
+                    filter: (i) => i.user.id === initiatorId && i.customId === 'appealAutoDenyModal',
+                });
+                const appealReason = submission.fields.getTextInputValue('appeal_reason')?.trim() || 'No reason provided';
+                await submission.deferUpdate();
+
+                // Post to verification channel now
+                const appealEmbed = EmbedBuilder.from(appEmbed)
+                    .setDescription('This application was auto-denied by AI and has been appealed by the user.')
+                    .addFields({ name: 'Appeal Reason', value: appealReason });
+
+                const approveButton = new ButtonBuilder().setCustomId('approveApplication').setLabel('Approve').setStyle(ButtonStyle.Success);
+                const denyButton = new ButtonBuilder().setCustomId('denyApplication').setLabel('Deny').setStyle(ButtonStyle.Danger);
+                const denyGuideButton = new ButtonBuilder().setCustomId('denyReadGuide').setLabel('Read The Guide').setStyle(ButtonStyle.Danger);
+                const banButton = new ButtonBuilder().setCustomId('banApplication').setLabel('Ban').setStyle(ButtonStyle.Danger);
+                const row = new ActionRowBuilder().addComponents(approveButton, denyButton, denyGuideButton, banButton);
+
+                const verificationMessage = await verificationChannel.send(
+                    vehicleAttachment.contentType?.includes('video')
+                        ? {
+                            content: `Vehicle Verification Video for: ${vehicleName}`,
+                            files: [{ attachment: vehicleAttachment.url, name: vehicleAttachment.name }],
+                            embeds: [appealEmbed],
+                            components: [row],
+                        }
+                        : { embeds: [appealEmbed], components: [row] }
+                );
+
+                // Update application record with appeal info
+                await verificationSchema.updateOne(
+                    { _id: application._id },
+                    {
+                        $set: {
+                            status: 'open',
+                            decision: null,
+                            decidedBy: null,
+                            decidedOn: null,
+                            applicationMessageId: verificationMessage.id,
+                            appealReason,
+                        },
+                    }
+                );
+
+                // Notify user
+                const appealAck = new EmbedBuilder()
+                    .setAuthor({ name: 'Appeal Submitted', iconURL: initiator.displayAvatarURL({ dynamic: true }) })
+                    .setDescription('Your appeal has been submitted to the verification team for review.')
+                    .addFields({ name: 'Appeal Reason', value: appealReason })
+                    .setColor('#FFFCFF')
+                    .setFooter({
+                        text: `${interaction.guild.name} • Vehicle Verification`,
+                        iconURL: guildProfile.customFooterIcon || interaction.guild.iconURL({ dynamic: true }),
+                    });
+
+                await interaction.editReply({ embeds: [appealAck], components: [] });
+                collector.stop('appealed');
+            } catch (err) {
+                await interaction.followUp({
+                    content: 'Appeal timed out or failed. Please try again with `/verify` if needed.',
+                    ephemeral: true,
+                });
+            }
+        });
+
+        collector.on('end', async (collected, reasonEnd) => {
+            if (reasonEnd !== 'appealed') {
+                await interaction.editReply({ components: [] }).catch(() => {});
+            }
+        });
+    }
 }
 
 async function handleHighValueRequiresVideo({ interaction, vehicleName, vehicleAttachment, customFooterIcon, guildProfile, estimatedValue }) {

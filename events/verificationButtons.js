@@ -21,9 +21,6 @@ module.exports = {
         if (!supportedActions.includes(action)) return;
 
         try {
-            // Defer the interaction to prevent timeout
-            await interaction.deferUpdate();
-
             // Route the action to its corresponding handler
             switch (action) {
                 case 'approveApplication':

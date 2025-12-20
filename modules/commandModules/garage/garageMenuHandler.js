@@ -6,7 +6,7 @@ const {
     ComponentType
 } = require('discord.js');
 
-module.exports = async (interaction, selectedOption, userGarage, guildProfile) => {
+module.exports = async (interaction, selectedOption, userGarage, guildProfile, parentMessage = null) => {
     try {
         // Validate selected option
         const selectedIndex = parseInt(selectedOption);
@@ -65,50 +65,67 @@ module.exports = async (interaction, selectedOption, userGarage, guildProfile) =
             );
 
             // Send the initial embed with buttons
-            await interaction.editReply({
+            const replyMessage = await interaction.editReply({
                 embeds: [vehicleEmbed],
                 components: vehicleImages.length > 1 ? [row] : [],
             });
 
-            // Create a collector for button interactions
-            const collector = interaction.channel.createMessageComponentCollector({
-                componentType: ComponentType.Button,
-                time: 600000, // 10 minutes
-                filter: (i) => i.user.id === interaction.user.id,
-            });
-
-            collector.on('collect', async (buttonInteraction) => {
-                if (buttonInteraction.customId === 'nextImage') {
-                    currentPage = (currentPage + 1) % vehicleImages.length;
-                } else if (buttonInteraction.customId === 'previousImage') {
-                    currentPage = (currentPage - 1 + vehicleImages.length) % vehicleImages.length;
-                }
-
-                // Update embed with the new image
-                vehicleEmbed.setImage(vehicleImages[currentPage]).setFooter({
-                    text: `${guildDisplayName} • Image ${currentPage + 1} of ${vehicleImages.length}`,
-                    iconURL: footerIconUrl,
+            // Only create collector if there are multiple images
+            if (vehicleImages.length > 1) {
+                // Create a collector for button interactions directly from the message
+                const collector = replyMessage.createMessageComponentCollector({
+                    componentType: ComponentType.Button,
+                    time: 600000, // 10 minutes
                 });
 
-                // Update button states
-                row.components[0].setDisabled(currentPage === 0); // Disable 'Previous' on first image
-                row.components[1].setDisabled(currentPage === vehicleImages.length - 1); // Disable 'Next' on last image
+                collector.on('collect', async (buttonInteraction) => {
+                    try {
+                        if (buttonInteraction.customId === 'nextImage') {
+                            currentPage = (currentPage + 1) % vehicleImages.length;
+                        } else if (buttonInteraction.customId === 'previousImage') {
+                            currentPage = (currentPage - 1 + vehicleImages.length) % vehicleImages.length;
+                        }
 
-                // Update the interaction
-                await buttonInteraction.update({
-                    embeds: [vehicleEmbed],
-                    components: [row],
-                });
-            });
+                        // Update embed with the new image
+                        vehicleEmbed.setImage(vehicleImages[currentPage]).setFooter({
+                            text: `${guildDisplayName} • Image ${currentPage + 1} of ${vehicleImages.length}`,
+                            iconURL: footerIconUrl,
+                        });
 
-            collector.on('end', async () => {
-                // Disable buttons when collector ends
-                row.components.forEach((button) => button.setDisabled(true));
-                await interaction.editReply({
-                    embeds: [vehicleEmbed],
-                    components: [row],
+                        // Update button states
+                        row.components[0].setDisabled(currentPage === 0); // Disable 'Previous' on first image
+                        row.components[1].setDisabled(currentPage === vehicleImages.length - 1); // Disable 'Next' on last image
+
+                        // Update the message
+                        await buttonInteraction.update({
+                            embeds: [vehicleEmbed],
+                            components: [row],
+                        });
+                    } catch (err) {
+                        console.error('Error updating garage navigation:', err);
+                        // Attempt to respond to the interaction if it hasn't been responded to
+                        if (!buttonInteraction.replied && !buttonInteraction.deferred) {
+                            await buttonInteraction.reply({
+                                content: 'An error occurred while navigating. Please try again.',
+                                ephemeral: true
+                            }).catch(console.error);
+                        }
+                    }
                 });
-            });
+
+                collector.on('end', async () => {
+                    try {
+                        // Disable buttons when collector ends
+                        row.components.forEach((button) => button.setDisabled(true));
+                        await interaction.editReply({
+                            embeds: [vehicleEmbed],
+                            components: [row],
+                        }).catch(console.error);
+                    } catch (err) {
+                        console.error('Error disabling buttons on collector end:', err);
+                    }
+                });
+            }
         } else {
             // If no images are available
             vehicleEmbed.setDescription(vehicleDescription || 'No images available for this vehicle.');
@@ -119,10 +136,20 @@ module.exports = async (interaction, selectedOption, userGarage, guildProfile) =
         }
     } catch (error) {
         console.error('Error handling garage menu:', error);
-        await interaction.followUp({
-            content: 'There was an error displaying the selected vehicle. Please try again.',
-            components: [],
-            ephemeral: true,
-        });
+        
+        // Check if we can still respond to the interaction
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({
+                content: 'There was an error displaying the selected vehicle. Please try again.',
+                components: [],
+                ephemeral: true,
+            }).catch(console.error);
+        } else {
+            await interaction.followUp({
+                content: 'There was an error displaying the selected vehicle. Please try again.',
+                components: [],
+                ephemeral: true,
+            }).catch(console.error);
+        }
     }
 };

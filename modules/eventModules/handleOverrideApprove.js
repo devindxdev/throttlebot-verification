@@ -12,6 +12,9 @@ const mongoose = require('mongoose');
  */
 module.exports = async function handleOverrideApprove(interaction) {
     try {
+        if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferUpdate();
+        }
         const guildId = interaction.guild.id;
         const moderatorId = interaction.user.id;
         const moderatorTag = interaction.user.tag;
@@ -145,9 +148,14 @@ module.exports = async function handleOverrideApprove(interaction) {
         });
     } catch (err) {
         console.error('Error handling override approve:', err);
-        await interaction.followUp({
+        const payload = {
             embeds: [errorEmbed(err.message, interaction.user.displayAvatarURL({ dynamic: true }))],
             ephemeral: true,
-        });
+        };
+        if (interaction.deferred || interaction.replied) {
+            await interaction.followUp(payload).catch(() => {});
+        } else {
+            await interaction.reply(payload).catch(() => {});
+        }
     }
 };

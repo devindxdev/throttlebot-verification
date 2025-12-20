@@ -81,7 +81,12 @@ module.exports = {
 
         } catch (error) {
             console.error('Error in verify command:', error);
-            const errorMessage = 'An unexpected error occurred while processing your verification request.';
+            const isFileTooLarge =
+                error?.code === 40005 ||
+                /file size|entity too large|payload too large/i.test(error?.message || '');
+            const errorMessage = isFileTooLarge
+                ? 'The uploaded file is too large for this server. Please upload a smaller file or try again in a boosted server.'
+                : 'An unexpected error occurred while processing your verification request.';
             
             if (interaction.deferred) {
                 await interaction.editReply({

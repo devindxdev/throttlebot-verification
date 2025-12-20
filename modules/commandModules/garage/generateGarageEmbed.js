@@ -58,10 +58,10 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
 
             const row = new ActionRowBuilder().addComponents(menu);
 
-            await interaction.editReply({ embeds: [embed], components: [row] });
+            const garageMessage = await interaction.editReply({ embeds: [embed], components: [row] });
 
-            // Step 3: Set up a collector for dropdown menu interactions
-            const collector = interaction.channel.createMessageComponentCollector({
+            // Step 3: Set up a collector for dropdown menu interactions (scoped to this message)
+            const collector = garageMessage.createMessageComponentCollector({
                 componentType: ComponentType.StringSelect,
                 time: 60000, // Collector active for 60 seconds
                 filter: (i) => i.user.id === interaction.user.id && i.customId === 'garage_menu',
@@ -98,7 +98,7 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
                     if (!selectedVehicle?.vehicleImages || selectedVehicle.vehicleImages.length === 0) return;
 
                     collector.stop();
-                    await require('./garageMenuHandler')(interaction, selectedOption, garageData, user, guildProfile);
+                    await require('./garageMenuHandler')(interaction, selectedOption, garageData, user, guildProfile, garageMessage);
                     
                 } catch (error) {
                     console.error('Error handling garage menu selection:', error);
@@ -112,7 +112,7 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
             collector.on('end', async () => {
                 // Disable dropdown after timeout
                 try {
-                    await interaction.editReply({
+                    await garageMessage.edit({
                         embeds: [embed],
                         components: [], // Disable dropdown after timeout
                     });

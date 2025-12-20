@@ -6,6 +6,9 @@ const { errorEmbed } = require('../utility.js');
 
 module.exports = async function handleOverrideDeny(interaction) {
     try {
+        if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferUpdate();
+        }
         const guildId = interaction.guild.id;
         const initiatorId = interaction.user.id;
         const initiatorTag = interaction.user.tag;
@@ -69,6 +72,11 @@ module.exports = async function handleOverrideDeny(interaction) {
         await interaction.followUp({ content: 'Application overridden and denied.', ephemeral: true });
     } catch (err) {
         console.error('Error handling override deny:', err);
-        await interaction.followUp({ embeds: [errorEmbed(err.message, interaction.user.displayAvatarURL({ dynamic: true }))], ephemeral: true });
+        const payload = { embeds: [errorEmbed(err.message, interaction.user.displayAvatarURL({ dynamic: true }))], ephemeral: true };
+        if (interaction.deferred || interaction.replied) {
+            await interaction.followUp(payload).catch(() => {});
+        } else {
+            await interaction.reply(payload).catch(() => {});
+        }
     }
 };

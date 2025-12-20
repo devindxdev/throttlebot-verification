@@ -19,7 +19,7 @@ const verificationApplication = new mongoose.Schema(
       index: true,
     },
     submittedOn: { type: Date, default: Date.now },
-    applicationMessageId: { type: String, required: true, index: true },
+    applicationMessageId: { type: String, default: null, index: true },
     decision: { type: String, default: null },
     decidedBy: { type: String, default: null },
     decidedOn: { type: Date, default: null },

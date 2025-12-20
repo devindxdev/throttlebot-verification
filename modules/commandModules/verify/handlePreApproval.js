@@ -7,8 +7,14 @@ module.exports = async (interaction, guildProfile, initiatorAvatar) => {
         const preApprovalEmbed = new EmbedBuilder()
             .setAuthor({ name: 'Vehicle Verification Pre-Approval', iconURL: initiatorAvatar })
             .setDescription(
-                `Before continuing, make sure you've read the verification requirements in <#${guildProfile.guideChannelId}>.\n\nHave you checked the guide and confirmed that you meet the requirements?`
+                `Before continuing, make sure you've read the verification requirements in <#${guildProfile.guideChannelId}>.\nHave you checked the guide and confirmed that you meet the requirements?`
             )
+            .addFields({
+                name: 'Important',
+                value:
+                    'Submitting applications that do not meet the requirements may result in disciplinary action.\n' + 
+                    'AI-generated images/videos are **not allowed and will result in a ban.**'
+            })
             .setColor('#FFFCFF');
 
         const row = new ActionRowBuilder().addComponents(

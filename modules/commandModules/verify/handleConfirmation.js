@@ -71,6 +71,14 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
                 row.components.forEach(button => button.setDisabled(true));
 
                 if (btnInteraction.customId === 'confirmVerification') {
+                    const runningRow = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('ai_verification_running')
+                            .setLabel('Running Verification...')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setDisabled(true)
+                    );
+                    await interaction.editReply({ components: [runningRow] });
                     resolve(true); // User confirms the submission
                 } else if (btnInteraction.customId === 'cancelVerification') {
                     // User cancels the submission

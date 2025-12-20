@@ -2,6 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 const verificationSchema = require('../../mongodb_schema/verificationApplicationSchema.js');
 const { obtainGuildProfile } = require('../database.js');
 const { errorEmbed } = require('../utility.js');
+const { collectDenialReason } = require('./collectDenialReason.js');
 
 /**
  * Handles staff-initiated denial of a verification application.
@@ -27,6 +28,16 @@ module.exports = async function handleDenial(interaction) {
         });
         if (!application) throw new Error('No open verification application found for this message.');
 
+        // Collect denial reason
+        const reason = await collectDenialReason(interaction);
+        if (!reason) {
+            await interaction.followUp({
+                embeds: [errorEmbed('Denial cancelled or timed out; no action taken.', interaction.user.displayAvatarURL({ dynamic: true }))],
+                ephemeral: true,
+            });
+            return;
+        }
+
         // Persist decision
         await verificationSchema.updateOne(
             { _id: application._id },
@@ -36,6 +47,7 @@ module.exports = async function handleDenial(interaction) {
                     decision: 'denied',
                     decidedBy: moderatorId,
                     decidedOn: new Date().toISOString(),
+                    denialReason: reason,
                 },
             }
         );
@@ -49,7 +61,10 @@ module.exports = async function handleDenial(interaction) {
         } else {
             updatedEmbed.addFields({ name: 'Status', value: 'Verification Denied' });
         }
-        updatedEmbed.addFields({ name: 'Decided By', value: `${moderatorTag} | <@${moderatorId}>` });
+        updatedEmbed.addFields(
+            { name: 'Decided By', value: `${moderatorTag} | <@${moderatorId}>` },
+            { name: 'Reason', value: reason || 'No reason provided' }
+        );
         updatedEmbed.setFooter({ text: footerText, iconURL: footerIcon });
 
         const disabledRow = new ActionRowBuilder().addComponents(
@@ -67,6 +82,7 @@ module.exports = async function handleDenial(interaction) {
                     `Your verification application for **${application.vehicle}** was denied by the staff.\n` +
                         `Please review the requirements in <#${guildProfile.guideChannelId}> and re-submit when ready.`
                 )
+                .addFields({ name: 'Reason', value: reason || 'No reason provided' })
                 .setColor('#FF6961')
                 .setFooter({ text: footerText, iconURL: footerIcon });
             await applicant.send({ embeds: [dmEmbed] });
@@ -99,9 +115,14 @@ module.exports = async function handleDenial(interaction) {
         });
     } catch (error) {
         console.error('Error handling denial:', error);
-        await interaction.followUp({
+        const payload = {
             embeds: [errorEmbed(error.message, interaction.user.displayAvatarURL({ dynamic: true }))],
             ephemeral: true,
-        });
+        };
+        if (interaction.deferred || interaction.replied) {
+            await interaction.followUp(payload).catch(() => {});
+        } else {
+            await interaction.reply(payload).catch(() => {});
+        }
     }
 };

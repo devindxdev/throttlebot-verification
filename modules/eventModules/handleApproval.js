@@ -10,6 +10,9 @@ const mongoose = require('mongoose');
 
 module.exports = async function handleApproval(interaction) {
     try {
+        if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferUpdate();
+        }
         const guildId = interaction.guild.id;
         const initiatorId = interaction.user.id;
         const initiatorTag = interaction.user.tag;
@@ -23,6 +26,7 @@ module.exports = async function handleApproval(interaction) {
         const { loggingChannelId, verifiedVehicleRoleId, customFooterIcon } = guildProfile;
         const footerIcon = customFooterIcon || interaction.guild.iconURL();
         const footerText = `${interaction.guild.name} • Vehicle Verification`;
+
 
         // Fetch the verification application using applicationMessageId
         const applicationMessageId = interaction.message.id;
@@ -188,9 +192,14 @@ module.exports = async function handleApproval(interaction) {
     } catch (error) {
         // Centralized error handling
         console.error(`Error in handleApproval: ${error.message}`);
-        await interaction.followUp({
+        const payload = {
             embeds: [errorEmbed(error.message, interaction.user.displayAvatarURL({ dynamic: true }))],
             ephemeral: true,
-        });
+        };
+        if (interaction.deferred || interaction.replied) {
+            await interaction.followUp(payload).catch(() => {});
+        } else {
+            await interaction.reply(payload).catch(() => {});
+        }
     }
 };

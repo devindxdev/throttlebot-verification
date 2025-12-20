@@ -8,6 +8,9 @@ const { errorEmbed } = require('../utility.js');
  */
 module.exports = async function handleGuideDenial(interaction) {
     try {
+        if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferUpdate();
+        }
         const guildId = interaction.guild.id;
         const moderatorId = interaction.user.id;
         const moderatorTag = interaction.user.tag;
@@ -98,9 +101,14 @@ module.exports = async function handleGuideDenial(interaction) {
         });
     } catch (error) {
         console.error('Error handling guide denial:', error);
-        await interaction.followUp({
+        const payload = {
             embeds: [errorEmbed(error.message, interaction.user.displayAvatarURL({ dynamic: true }))],
             ephemeral: true,
-        });
+        };
+        if (interaction.deferred || interaction.replied) {
+            await interaction.followUp(payload).catch(() => {});
+        } else {
+            await interaction.reply(payload).catch(() => {});
+        }
     }
 };

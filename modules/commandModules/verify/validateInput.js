@@ -29,14 +29,6 @@ module.exports = async (interaction, vehicleAttachment, vehicleName, initiatorId
             throw new Error('Unsupported file type. Please upload an image or a short video.');
         }
 
-        if (isImage && size > 8_000_000) {
-            throw new Error('The image size exceeds the 8MB limit.');
-        }
-
-        if (isVideo && size > 25_000_000) {
-            throw new Error('The video size exceeds the 25MB limit.');
-        }
-
         if (isImage && name.toLowerCase().includes('heic')) {
             throw new Error('HEIC images are not supported. Please upload a different format.');
         }
