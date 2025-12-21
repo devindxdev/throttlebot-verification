@@ -49,6 +49,7 @@ module.exports = async function handleApproval(interaction) {
                 premiumTier: 0,
                 embedColor: '',
                 garageThumbnail: '',
+                sortPreference: 'default',
             });
             await newUserProfile.save();
         }

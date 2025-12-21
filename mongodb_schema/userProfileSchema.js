@@ -11,6 +11,7 @@ const profileSchema = new mongoose.Schema(
     embedColor: { type: String, default: '' },
     garageThumbnail: { type: String, default: '' },
     verificationBanned: { type: Boolean, default: false },
+    sortPreference: { type: String, default: 'default', enum: ['default', 'year-asc', 'year-desc'] },
   },
   {
     timestamps: true,

@@ -1,8 +1,9 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { obtainGuildProfile } = require('../modules/database.js');
+const { obtainGuildProfile, obtainUserProfile } = require('../modules/database.js');
 const { errorEmbed } = require('../modules/utility.js');
 const getUserGarage = require('../modules/commandModules/garage/getUserGarage.js');
 const generateGarageEmbed = require('../modules/commandModules/garage/generateGarageEmbed.js');
+const { sortGarageData } = require('../modules/commandModules/garage/sorting.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -42,8 +43,19 @@ module.exports = {
         try {
             // Step 1: Fetch the user's garage
             const garageData = await getUserGarage(userId, guildProfile);
+
+            // Step 1.5: Determine sorting preference (default if unavailable)
+            let sortPreference = 'default';
+            try {
+                const userProfile = await obtainUserProfile(userId);
+                if (userProfile?.sortPreference) sortPreference = userProfile.sortPreference;
+            } catch (err) {
+                console.warn('Failed to fetch user profile for sorting preference:', err.message);
+            }
+            const sortedGarage = sortGarageData(garageData, sortPreference);
+
             // Step 2: Generate the main garage embed with a dropdown menu
-            await generateGarageEmbed(interaction, garageData, user, guildProfile);
+            await generateGarageEmbed(interaction, sortedGarage, user, guildProfile);
 
         } catch (error) {
             console.error('Error in /garage command:', error);

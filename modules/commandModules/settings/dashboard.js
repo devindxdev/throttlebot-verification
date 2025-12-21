@@ -8,12 +8,14 @@ const imagesFlow = require('./flows/images.js');
 const descriptionFlow = require('./flows/description.js');
 const garageIconFlow = require('./flows/garageIcon.js');
 const embedColorFlow = require('./flows/embedColor.js');
+const sortingFlow = require('./flows/sorting.js');
 
 const MENU_OPTIONS = [
     { label: 'Images', description: 'View or remove vehicle images.', value: 'images' },
     { label: 'Description', description: 'Set or reset vehicle description.', value: 'description' },
     { label: 'Garage Icon', description: 'Set or reset your garage icon.', value: 'garageIcon' },
     { label: 'Embed Color', description: 'Customize your embed color.', value: 'embedColor' },
+    { label: 'Sorting', description: 'Choose how your garage is sorted.', value: 'sorting' },
     { label: 'Exit', description: 'Exit the settings interface.', value: 'exit' },
 ];
 
@@ -104,6 +106,14 @@ async function presentSettingsDashboard(context) {
                 break;
             case 'embedColor':
                 await embedColorFlow(selectInteraction, {
+                    interaction,
+                    initiator,
+                    embedColor,
+                    footer,
+                });
+                break;
+            case 'sorting':
+                await sortingFlow(selectInteraction, {
                     interaction,
                     initiator,
                     embedColor,

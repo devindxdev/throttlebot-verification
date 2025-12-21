@@ -238,6 +238,7 @@ async function autoApproveApplication({ interaction, guildProfile, vehicleName, 
             premiumTier: 0,
             embedColor: '',
             garageThumbnail: '',
+            sortPreference: 'default',
         });
         await newProfile.save();
     }

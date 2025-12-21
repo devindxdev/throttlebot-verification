@@ -20,6 +20,7 @@ async function upsertGarageIcon(userId, iconUrl) {
         premiumTier: 0,
         embedColor: null,
         garageThumbnail: iconUrl,
+        sortPreference: 'default',
     });
 }
 
@@ -30,7 +31,33 @@ async function clearGarageIcon(userId) {
 async function updateEmbedColor(userId, embedColor) {
     await userProfileSchema.updateOne(
         { userId },
-        { $set: { embedColor } },
+        {
+            $set: { embedColor },
+            $setOnInsert: {
+                premiumUser: false,
+                premiumTier: 0,
+                garageThumbnail: '',
+                verificationBanned: false,
+                sortPreference: 'default',
+            },
+        },
+        { upsert: true }
+    );
+}
+
+async function updateSortPreference(userId, sortPreference) {
+    await userProfileSchema.updateOne(
+        { userId },
+        {
+            $set: { sortPreference },
+            $setOnInsert: {
+                premiumUser: false,
+                premiumTier: 0,
+                embedColor: '',
+                garageThumbnail: '',
+                verificationBanned: false,
+            },
+        },
         { upsert: true }
     );
 }
@@ -40,4 +67,5 @@ module.exports = {
     upsertGarageIcon,
     clearGarageIcon,
     updateEmbedColor,
+    updateSortPreference,
 };

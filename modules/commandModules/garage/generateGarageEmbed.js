@@ -112,8 +112,8 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
                 }
             });
 
-            collector.on('end', async () => {
-                // Disable dropdown after timeout
+            collector.on('end', async (_collected, reason) => {
+                if (reason !== 'time') return; // keep the vehicle view intact when user selects
                 try {
                     await garageMessage.edit({
                         embeds: [embed],

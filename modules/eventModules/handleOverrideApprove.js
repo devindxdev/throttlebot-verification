@@ -46,6 +46,7 @@ module.exports = async function handleOverrideApprove(interaction) {
                 premiumTier: 0,
                 embedColor: '',
                 garageThumbnail: '',
+                sortPreference: 'default',
             });
             await newProfile.save();
         }
