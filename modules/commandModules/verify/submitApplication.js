@@ -77,8 +77,8 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
                     });
                     return;
                 }
-                // Auto-deny when confident enough (>=50) and requirements are not met
-                if (confidence >= 50 && requirementsMet === false) {
+                // Auto-deny when confident enough (>=80) and requirements are not met
+                if (confidence >= 80 && requirementsMet === false) {
                     await autoDenyApplication({
                         interaction,
                         guildProfile,
