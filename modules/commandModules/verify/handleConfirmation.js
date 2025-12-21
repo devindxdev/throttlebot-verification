@@ -74,7 +74,7 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
                     const runningRow = new ActionRowBuilder().addComponents(
                         new ButtonBuilder()
                             .setCustomId('ai_verification_running')
-                            .setLabel('Running Verification...')
+                            .setLabel('Pre-Screening')
                             .setStyle(ButtonStyle.Secondary)
                             .setDisabled(true)
                     );
