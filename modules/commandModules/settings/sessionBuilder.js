@@ -52,7 +52,7 @@ async function buildSettingsSession(interaction) {
         };
     }
 
-    const embedColor = await defaultEmbedColor(initiator.id);
+    const embedColor = (await defaultEmbedColor(initiator.id)) || '#FFFCFF';
     const footerIcon = customFooterIcon || guild.iconURL({ dynamic: true });
     const footerText = `${guildName} • Vehicle Verification`;
 
