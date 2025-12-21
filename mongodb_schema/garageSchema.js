@@ -13,6 +13,9 @@ const garageSchema = new mongoose.Schema(
     vehicleAddedDate: { type: Date, default: Date.now },
     verificationImageLink: { type: String, default: null },
     embedColor: { type: String, default: null },
+    estimatedValueUSD: { type: Number, default: null },
+    estimatedValueConfidence: { type: Number, default: null },
+    estimatedValueUpdatedAt: { type: Date, default: null },
   },
   {
     timestamps: true,
