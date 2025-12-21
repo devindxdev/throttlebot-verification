@@ -55,7 +55,11 @@ async function manageName(
     const footerText = footerData.text;
 
     //Filters
-    const buttonFilter = i => i.user.id === initiatorId && i.guild.id === guildId;
+    const manageMessage = await interaction.fetchReply().catch(() => null);
+    const buttonFilter = (i) =>
+        i.user.id === initiatorId &&
+        i.guild?.id === guildId &&
+        (!manageMessage || i.message?.id === manageMessage.id);
     const modalFilter = (modalInteraction) => modalInteraction.customId === `setNameModal+${mainInteractionId}` && modalInteraction.user.id === initiatorId;
 
     const buildDashboardEmbed = () =>

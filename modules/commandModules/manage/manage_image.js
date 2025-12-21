@@ -38,7 +38,11 @@ async function manageImage(
     const footerText = footerData.text;
     const guildDisplayName = interaction.guild?.name || guildData.name || 'Vehicle Verification';
 
-    const buttonFilter = (btn) => btn.user.id === initiatorId && btn.guild.id === guildId;
+    const manageMessage = await interaction.fetchReply().catch(() => null);
+    const buttonFilter = (btn) =>
+        btn.user.id === initiatorId &&
+        btn.guild?.id === guildId &&
+        (!manageMessage || btn.message?.id === manageMessage.id);
 
     let currentIndex = 0;
 

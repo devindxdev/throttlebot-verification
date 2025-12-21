@@ -41,7 +41,11 @@ async function manageGarageIcon(
     const footerIcon = footerData.icon;
     const footerText = footerData.text;
 
-    const buttonFilter = (btn) => btn.user.id === initiatorId && btn.guild.id === guildId;
+    const manageMessage = await interaction.fetchReply().catch(() => null);
+    const buttonFilter = (btn) =>
+        btn.user.id === initiatorId &&
+        btn.guild?.id === guildId &&
+        (!manageMessage || btn.message?.id === manageMessage.id);
     const modalFilter = (modalInteraction) => modalInteraction.customId === `setGarageIconModal+${mainInteractionId}` && modalInteraction.user.id === initiatorId;
 
     let userProfile;

@@ -179,8 +179,15 @@ async function manageDashboard(
         components: [row]
     });
 
+    const manageMessage = await interaction.fetchReply().catch(() => null);
+
     const menuCollector = interaction.channel.createMessageComponentCollector({
-        filter: menuFilter,
+        filter: (menuInteraction) =>
+            menuInteraction.componentType === ComponentType.StringSelect &&
+            menuInteraction.customId === `manageMenu+${mainInteractionId}` &&
+            menuInteraction.user.id === initiatorId &&
+            menuInteraction.guild?.id === guildId &&
+            (!manageMessage || menuInteraction.message?.id === manageMessage.id),
         max: 1,
         time: 120000
     });

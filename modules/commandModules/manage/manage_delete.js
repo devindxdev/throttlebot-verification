@@ -48,7 +48,11 @@ async function manageDelete(
     const footerText = footerData.text;
 
     //Filters
-    const buttonFilter = i => i.user.id === initiatorId && i.guild.id === guildId;
+    const manageMessage = await interaction.fetchReply().catch(() => null);
+    const buttonFilter = (i) =>
+        i.user.id === initiatorId &&
+        i.guild?.id === guildId &&
+        (!manageMessage || i.message?.id === manageMessage.id);
 
     const manageDeleteDashboardEmbed = new EmbedBuilder()
     .setAuthor({
