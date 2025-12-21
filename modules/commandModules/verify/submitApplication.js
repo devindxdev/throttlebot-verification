@@ -50,7 +50,7 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
                 const estimatedValue = Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : null;
 
                 // High-value rules
-                if (estimatedValue !== null && estimatedValue >= 80000) {
+                if (estimatedValue !== null && estimatedValue >= 100000) {
                     await handleHighValueRequiresVideo({
                         interaction,
                         vehicleName,
@@ -248,7 +248,7 @@ async function autoApproveApplication({ interaction, guildProfile, vehicleName, 
         guildId,
         userId: initiatorId,
         vehicle: vehicleName,
-        vehicleImages: [vehicleAttachment.url],
+        vehicleImages: [],
         vehicleDescription: null,
         vehicleAddedDate: new Date().toISOString(),
         verificationImageLink: vehicleAttachment.proxyURL,
@@ -311,8 +311,17 @@ async function autoApproveApplication({ interaction, guildProfile, vehicleName, 
     // User confirmation
     const confirmationEmbed = new EmbedBuilder()
         .setAuthor({ name: 'Verification Auto-Approved', iconURL: initiator.displayAvatarURL({ dynamic: true }) })
-        .setDescription('Your verification was automatically approved. You can manage your garage using `/garage`.')
-        .addFields({ name: 'Vehicle', value: vehicleName, inline: true })
+        .setDescription('Your verification was automatically approved. You are all set!')
+        .addFields(
+            { name: 'Vehicle', value: vehicleName, inline: true },
+            {
+                name: 'Next Steps',
+                value:
+                    '• View your verified vehicles with `/garage`.\n' +
+                    '• Customize images and descriptions with `/settings`.\n' +
+                    '• Verify another vehicle anytime with `/verify`.',
+            }
+        )
         .setColor('#77DD77')
         .setThumbnail(vehicleAttachment.url)
         .setFooter({
@@ -499,9 +508,8 @@ async function handleHighValueRequiresVideo({ interaction, vehicleName, vehicleA
         .setAuthor({ name: 'High-Value Verification Required', iconURL: interaction.user.displayAvatarURL({ dynamic: true }) })
         .setDescription(
             'This vehicle appears to be high value. For security, please re-submit using a short video instead of an image that clearly shows:\n' +
-            '- The vehicle and keys\n' +
-            '- A handwritten note with your Discord username and server name\n' +
-            '- Walk-around view of the vehicle'
+            '1. Show the vehicle in the video and unlock the vehicle with your keys.\n' +
+            `2. While showing this, say "The Car Community" and your Discord username "${interaction.user.username}.`
         )
         .addFields(
             { name: 'Vehicle', value: vehicleName, inline: true },

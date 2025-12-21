@@ -58,7 +58,7 @@ module.exports = async function handleOverrideApprove(interaction) {
                 guildId,
                 userId,
                 vehicle,
-                vehicleImages: vehicleImageURL ? [vehicleImageURL] : vehicleImageProxyURL ? [vehicleImageProxyURL] : [],
+                vehicleImages: [],
                 vehicleDescription: null,
                 vehicleAddedDate: new Date().toISOString(),
                 verificationImageLink: vehicleImageProxyURL,
@@ -128,9 +128,14 @@ module.exports = async function handleOverrideApprove(interaction) {
             const applicant = await interaction.client.users.fetch(userId);
             const dmEmbed = new EmbedBuilder()
                 .setAuthor({ name: 'Vehicle Verification Processed', iconURL: footerIcon })
-                .setDescription(
-                    `Your verification for **${vehicle}** was approved by staff after review. You can manage your garage with \`/garage\`.`
-                )
+                .setDescription(`Your verification for **${vehicle}** was approved by staff after review.`)
+                .addFields({
+                    name: 'Next Steps',
+                    value:
+                        '• View your verified vehicles with `/garage`.\n' +
+                        '• Customize images and descriptions with `/settings`.\n' +
+                        '• Verify another vehicle anytime with `/verify`.',
+                })
                 .setColor(greenColor)
                 .setFooter({ text: footerText, iconURL: footerIcon });
             if (vehicleImageURL) dmEmbed.setThumbnail(vehicleImageURL);

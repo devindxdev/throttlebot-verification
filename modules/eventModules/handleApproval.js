@@ -132,13 +132,16 @@ module.exports = async function handleApproval(interaction) {
                 name: 'Vehicle Verification Processed',
                 iconURL: interaction.guild.iconURL(),
             })
-            .setDescription('Your vehicle verification application has been approved! Details are below.')
+            .setDescription('Your verification has been approved. Welcome to your garage!')
             .addFields(
                 { name: 'Vehicle', value: vehicle, inline: true },
                 { name: 'Decision', value: 'Approved Verification', inline: true },
                 {
-                    name: 'Note',
-                    value: 'You can now manage your garage using the `/garage` command.',
+                    name: 'Next Steps',
+                    value:
+                        '• View your verified vehicles with `/garage`.\n' +
+                        '• Customize images and descriptions with `/settings`.\n' +
+                        '• Verify another vehicle anytime with `/verify`.',
                 }
             )
             .setThumbnail(vehicleImageURL)

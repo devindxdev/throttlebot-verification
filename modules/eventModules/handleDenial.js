@@ -82,7 +82,16 @@ module.exports = async function handleDenial(interaction) {
                     `Your verification application for **${application.vehicle}** was denied by the staff.\n` +
                         `Please review the requirements in <#${guildProfile.guideChannelId}> and re-submit when ready.`
                 )
-                .addFields({ name: 'Reason', value: reason || 'No reason provided' })
+                .addFields(
+                    { name: 'Reason', value: reason || 'No reason provided' },
+                    {
+                        name: 'Next Steps',
+                        value:
+                            '• Review the verification guide and requirements.\n' +
+                            '• Submit a new application with `/verify`.\n' +
+                            '• If you have questions, contact a moderator.',
+                    }
+                )
                 .setColor('#FF6961')
                 .setFooter({ text: footerText, iconURL: footerIcon });
             await applicant.send({ embeds: [dmEmbed] });

