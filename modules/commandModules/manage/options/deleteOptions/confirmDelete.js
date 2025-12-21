@@ -2,7 +2,8 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentTyp
 const { exitGlobal } = require('../exitGlobal.js');
 const { backGlobal } = require('../backGlobal.js');
 const garageSchema = require('../../../../../mongodb_schema/garageSchema.js');
-const { greenColor,errorEmbed } = require('../../../../utility.js');
+const { errorEmbed } = require('../../../../utility.js');
+const { greenColor } = require('../../../../constants.js');
 
 async function confirmDelete(
     interaction,

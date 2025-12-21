@@ -33,11 +33,15 @@ async function manageDashboard(
     const guildName = guildData.name;
     const guildIcon = guildData.iconURL({ dynamic: true });	
     
-    //Filters
-    const menuFilter = (menuInteraction) => menuInteraction.componentType === ComponentType.StringSelect && menuInteraction.customId === `manageMenu+${mainInteractionId}` && menuInteraction.user.id === initiatorId && menuInteraction.guild.id === guildId;
-   
     //Misc
     const mainInteractionId = interaction.id;
+    const safeEmbedColor = embedColor || '#FFFCFF';
+    const menuFilter = (menuInteraction) =>
+        menuInteraction.componentType === ComponentType.StringSelect &&
+        menuInteraction.customId === `manageMenu+${mainInteractionId}` &&
+        menuInteraction.user.id === initiatorId &&
+        menuInteraction.guild?.id === guildId &&
+        menuInteraction.message?.id === interaction.id;
 
     //Guild Profile
     const guildProfile = await obtainGuildProfile(guildId);
@@ -100,7 +104,14 @@ async function manageDashboard(
         return;
     };
 
-    const selectedVehicleData = await vehicleSelection(garageData, userData, footerText, footerIcon, embedColor, interaction);
+    const selectedVehicleData = await vehicleSelection(
+        garageData,
+        userData,
+        footerText,
+        footerIcon,
+        safeEmbedColor,
+        interaction
+    );
     if(!selectedVehicleData) return;
     const vehicleName = selectedVehicleData.vehicle;
     const verificationImage = selectedVehicleData.verificationImageLink || "https://www.youtube.com/watch?v=dQw4w9WgXcQ" //Checkout this link.
@@ -118,7 +129,7 @@ async function manageDashboard(
         { name: 'Vehicle', value: `[${vehicleName}](${verificationImage})`, inline: true },
         { name: 'Owner', value: userTag, inline: true }
     )
-    .setColor(embedColor)
+    .setColor(safeEmbedColor)
     .setFooter({
         text: footerText,
         iconURL: footerIcon
@@ -189,7 +200,7 @@ async function manageDashboard(
                     initiatorData, 
                     userData,
                     guildData,
-                    embedColor,
+                    safeEmbedColor,
                     footerData,
                     garageData,
                     selectedVehicleData,
@@ -202,7 +213,7 @@ async function manageDashboard(
                     initiatorData,
                     userData,
                     guildData,
-                    embedColor,
+                    safeEmbedColor,
                     footerData,
                     garageData,
                     selectedVehicleData,
@@ -216,7 +227,7 @@ async function manageDashboard(
                     initiatorData, 
                     userData,
                     guildData,
-                    embedColor,
+                    safeEmbedColor,
                     footerData,
                     garageData,
                     selectedVehicleData,
@@ -229,7 +240,7 @@ async function manageDashboard(
                     initiatorData, 
                     userData,
                     guildData,
-                    embedColor,
+                    safeEmbedColor,
                     footerData,
                     garageData,
                     selectedVehicleData,
@@ -242,7 +253,7 @@ async function manageDashboard(
                     initiatorData, 
                     userData,
                     guildData,
-                    embedColor,
+                    safeEmbedColor,
                     footerData,
                     garageData,
                     selectedVehicleData,

@@ -21,10 +21,10 @@ const { error } = require('node:console');
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('manage')
-		.setDescription('Manage verified vehicles, edit, delete them etc.')
+		.setDescription('Staff-only: manage verified vehicles. For your own edits, use `/settings`.')
 		.addUserOption(option => option.setName('user').setDescription('Manage the mentioned user.')),
 	async execute(interaction) {
-		if(!interaction.deferred) await interaction.deferReply({ ephemeral: true });
+		if(!interaction.deferred) await interaction.deferReply({ ephemeral: false });
 		//Initiator info
 		const initiatorData = interaction.user;
 		const initiatorId = interaction.user.id;
@@ -35,7 +35,7 @@ module.exports = {
         const isPrivilegedUser = initiatorId === "378171973429231616";
 		if(!hasManageNicknames && !isPrivilegedUser){
 			interaction.editReply({
-				embeds: [errorEmbed('You do not have authorization to use this command. (Manage Nicknames permission is required)', initiatorAvatar)]
+				embeds: [errorEmbed('You do not have authorization to use this command. This tool is for staff. Please use `/settings` to edit your own vehicles.', initiatorAvatar)]
 			});
 			return;
 		};

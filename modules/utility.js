@@ -112,5 +112,7 @@ module.exports = {
     isValidHttpUrl,
     patreonAdvertEmbed,
     tipsEmbed,
-    capitalizeFirstLetter
+    capitalizeFirstLetter,
+    greenColor: require('../modules/constants.js').greenColor,
+    redColor: require('../modules/constants.js').redColor,
 };
