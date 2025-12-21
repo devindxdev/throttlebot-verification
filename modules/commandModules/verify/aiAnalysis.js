@@ -28,8 +28,7 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
         const prompt = `
 You are validating a vehicle verification photo for AI verification. Respond ONLY with a single JSON object and no extra text.
 Required in the image:
-- Handwritten note with Username: "${interaction.user.tag}"
-- Handwritten note with Server: "${interaction.guild.name}"
+- Handwritten note (content can be any text; do NOT validate username/server name).
 - Vehicle and keys visible.
 
 Return JSON with these keys:
