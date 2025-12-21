@@ -1,5 +1,13 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { MessageEmbed, MessageActionRow, MessageSelectMenu, MessageButton, Modal, TextInputComponent} = require('discord.js');
+const {
+    MessageEmbed,
+    MessageActionRow,
+    MessageSelectMenu,
+    MessageButton,
+    Modal,
+    TextInputComponent,
+    PermissionsBitField,
+} = require('discord.js');
 const { obtainGuildProfile, defaultEmbedColor, obtainUserProfile, obtainAllUserVehicles } = require('../modules/database.js');
 //const { vehicleSelection } = require('../modules/commandModules/garage/vehicleSelection.js');
 const { manageDashboard } = require('../modules/commandModules/manage/main.js');
@@ -16,15 +24,16 @@ module.exports = {
 		.setDescription('Manage verified vehicles, edit, delete them etc.')
 		.addUserOption(option => option.setName('user').setDescription('Manage the mentioned user.')),
 	async execute(interaction) {
-		if(!interaction.deferred) await interaction.deferReply({ ephemral: true });
+		if(!interaction.deferred) await interaction.deferReply({ ephemeral: true });
 		//Initiator info
 		const initiatorData = interaction.user;
 		const initiatorId = interaction.user.id;
 		const initiatorUsername = interaction.user.username;
 		const initiatorAvatar = interaction.user.displayAvatarURL({ dynamic: true });
 		const initiatorTag = interaction.user.tag;
-		const initiatorPermissions = interaction.memberPermissions.toArray();
-		if(!initiatorPermissions.includes('MANAGE_NICKNAMES') && initiatorId !== "378171973429231616"){
+        const hasManageNicknames = interaction.member?.permissions?.has(PermissionsBitField.Flags.ManageNicknames);
+        const isPrivilegedUser = initiatorId === "378171973429231616";
+		if(!hasManageNicknames && !isPrivilegedUser){
 			interaction.editReply({
 				embeds: [errorEmbed('You do not have authorization to use this command. (Manage Nicknames permission is required)', initiatorAvatar)]
 			});
