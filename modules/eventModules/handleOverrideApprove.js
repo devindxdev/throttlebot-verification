@@ -62,7 +62,7 @@ module.exports = async function handleOverrideApprove(interaction) {
                 vehicleImages: [],
                 vehicleDescription: null,
                 vehicleAddedDate: new Date().toISOString(),
-                verificationImageLink: vehicleImageProxyURL,
+                verificationImageLink: vehicleImageURL,
                 embedColor: null,
             });
             await newRide.save();

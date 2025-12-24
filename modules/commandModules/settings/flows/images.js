@@ -220,7 +220,33 @@ module.exports = async function imagesFlow(triggerInteraction, ctx) {
             }
 
             const insertIndex = vehicleImages.length === 0 ? 0 : currentIndex + 1;
-            vehicleImages.splice(insertIndex, 0, iconUrl);
+            if (!logChannel) {
+                await submission.reply({
+                    embeds: [errorEmbed('Image uploads are unavailable because the log channel is not configured.', initiatorAvatar)],
+                    ephemeral: true,
+                });
+                return;
+            }
+
+            let storedUrl = iconUrl;
+            try {
+                const uploadName = uploadedFile.name || `vehicle-image.${extensionMatch || 'png'}`;
+                const uploadMessage = await logChannel.send({
+                    files: [{ attachment: iconUrl, name: uploadName }],
+                });
+                const uploadedAttachment = uploadMessage.attachments.first();
+                if (uploadedAttachment?.url) {
+                    storedUrl = uploadedAttachment.url;
+                }
+            } catch (err) {
+                await submission.reply({
+                    embeds: [errorEmbed('Failed to store the image. Please try again later.', initiatorAvatar)],
+                    ephemeral: true,
+                });
+                return;
+            }
+
+            vehicleImages.splice(insertIndex, 0, storedUrl);
             try {
                 await saveVehicleImages({
                     guildId: guild.id,
@@ -246,9 +272,9 @@ module.exports = async function imagesFlow(triggerInteraction, ctx) {
                 .addFields(
                     { name: 'Vehicle', value: selectedVehicle.vehicle, inline: true },
                     { name: 'Owner', value: initiator.tag, inline: true },
-                    { name: 'Image', value: `[View Image](${iconUrl})` }
+                    { name: 'Image', value: `[View Image](${storedUrl})` }
                 )
-                .setImage(iconUrl)
+                .setImage(storedUrl)
                 .setColor('#77DD77')
                 .setFooter({ text: footer.text, iconURL: footer.icon });
 

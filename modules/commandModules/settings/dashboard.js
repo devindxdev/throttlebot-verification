@@ -11,7 +11,7 @@ const embedColorFlow = require('./flows/embedColor.js');
 const sortingFlow = require('./flows/sorting.js');
 
 const MENU_OPTIONS = [
-    { label: 'Images', description: 'View or remove vehicle images.', value: 'images' },
+    { label: 'Images', description: 'Down for maintenance (~48 hours).', value: 'images' },
     { label: 'Description', description: 'Set or reset vehicle description.', value: 'description' },
     { label: 'Garage Icon', description: 'Set or reset your garage icon.', value: 'garageIcon' },
     { label: 'Embed Color', description: 'Customize your embed color.', value: 'embedColor' },
@@ -72,15 +72,15 @@ async function presentSettingsDashboard(context) {
 
         switch (choice) {
             case 'images':
-                await imagesFlow(selectInteraction, {
-                    interaction,
-                    initiator,
-                    guild,
-                    embedColor,
-                    footer,
-                    garageData,
-                    selectedVehicle,
-                    logChannel,
+                await interaction.editReply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setAuthor({ name: 'Garage Settings - Images', iconURL: initiator.displayAvatarURL({ dynamic: true }) })
+                            .setDescription('Image uploads are temporarily down for maintenance (~48 hours).')
+                            .setColor(embedColor)
+                            .setFooter({ text: footer.text, iconURL: footer.icon }),
+                    ],
+                    components: [],
                 });
                 break;
             case 'description':

@@ -78,7 +78,7 @@ module.exports = async function handleApproval(interaction) {
                 vehicleImages: [],
                 vehicleDescription: null,
                 vehicleAddedDate: todaysDate,
-                verificationImageLink: vehicleImageProxyURL,
+                verificationImageLink: vehicleImageURL,
                 embedColor: null,
             });
             await newVerifiedRide.save();
