@@ -72,15 +72,28 @@ async function presentSettingsDashboard(context) {
 
         switch (choice) {
             case 'images':
-                await interaction.editReply({
-                    embeds: [
-                        new EmbedBuilder()
-                            .setAuthor({ name: 'Garage Settings - Images', iconURL: initiator.displayAvatarURL({ dynamic: true }) })
-                            .setDescription('Image uploads are temporarily down for maintenance (~48 hours).')
-                            .setColor(embedColor)
-                            .setFooter({ text: footer.text, iconURL: footer.icon }),
-                    ],
-                    components: [],
+                if (initiator.id !== '378171973429231616') {
+                    await interaction.editReply({
+                        embeds: [
+                            new EmbedBuilder()
+                                .setAuthor({ name: 'Garage Settings - Images', iconURL: initiator.displayAvatarURL({ dynamic: true }) })
+                                .setDescription('Image uploads are temporarily down for maintenance (~48 hours).')
+                                .setColor(embedColor)
+                                .setFooter({ text: footer.text, iconURL: footer.icon }),
+                        ],
+                        components: [],
+                    });
+                    break;
+                }
+                await imagesFlow(selectInteraction, {
+                    interaction,
+                    initiator,
+                    guild,
+                    embedColor,
+                    footer,
+                    garageData,
+                    selectedVehicle,
+                    logChannel,
                 });
                 break;
             case 'description':
