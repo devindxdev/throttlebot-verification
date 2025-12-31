@@ -1,4 +1,11 @@
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ComponentType  } = require('discord.js');
+const {
+    EmbedBuilder,
+    ActionRowBuilder,
+    StringSelectMenuBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    ComponentType,
+} = require('discord.js');
 
 module.exports = async (interaction, garageData, user, guildProfile) => {
     try {
@@ -10,26 +17,34 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
         const embedColor = guildProfile.embedColor || '#0099ff';
         const footerIcon = guildProfile.footerIcon || interaction.guild.iconURL({ dynamic: true });
 
-        // Generate vehicle list with passport vehicles uniquely marked
-        const vehicleList = garageData.map((vehicle, index) => {
-        const isPassportVehicle = passportEnabled && vehicle.guildId === passportServerId;
-        const imageCount = vehicle.vehicleImages?.length || 0;
+        const pageSize = 10;
+        let page = 1;
+        const totalPages = Math.ceil(garageData.length / pageSize);
 
-        const label =
-            vehicle?.vehicle && vehicle.vehicle.trim().length > 0
-                ? vehicle.vehicle.trim().slice(0, 100)
-                : `Vehicle ${index + 1}`;
-        const descriptionText = imageCount > 0
-            ? `${imageCount} image${imageCount === 1 ? '' : 's'} available to view`
-            : 'No images uploaded yet.';
+        const buildVehicleList = () => {
+            const startIndex = (page - 1) * pageSize;
+            const slice = garageData.slice(startIndex, startIndex + pageSize);
+            return slice.map((vehicle, index) => {
+                const absoluteIndex = startIndex + index;
+                const isPassportVehicle = passportEnabled && vehicle.guildId === passportServerId;
+                const imageCount = vehicle.vehicleImages?.length || 0;
 
-        return {
-            label,
-            description: descriptionText,
-            value: `${index}`, // Corresponds to the index
-            emoji: isPassportVehicle ? '<:TCC:1326753919321243719>' : undefined, // Emoji for passport vehicles
+                const label =
+                    vehicle?.vehicle && vehicle.vehicle.trim().length > 0
+                        ? vehicle.vehicle.trim().slice(0, 100)
+                        : `Vehicle ${absoluteIndex + 1}`;
+                const descriptionText = imageCount > 0
+                    ? `${imageCount} image${imageCount === 1 ? '' : 's'} available to view`
+                    : 'No images uploaded yet.';
+
+                return {
+                    label,
+                    description: descriptionText,
+                    value: `${absoluteIndex}`,
+                    emoji: isPassportVehicle ? '<:TCC:1326753919321243719>' : undefined,
+                };
+            });
         };
-        });
 
         // Embed content
         const embed = new EmbedBuilder()
@@ -44,21 +59,58 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
             });
 
         // If there are vehicles, generate the embed with dropdown
-        if (vehicleList.length > 0) {
-            embed.setDescription(
-                `Select a vehicle from the dropdown menu below to view more details.\n${vehicleList
-                    .map((vehicle, index) => `\`${index + 1}.\` ${vehicle.label} ${vehicle.emoji || ''}`)
-                    .join('\n')}`
-            );
+        if (garageData.length > 0) {
+            const buildEmbed = () => {
+                const vehicleList = buildVehicleList();
+                const startIndex = (page - 1) * pageSize;
+                const listText = vehicleList
+                    .map((vehicle, index) => `\`${startIndex + index + 1}.\` ${vehicle.label} ${vehicle.emoji || ''}`)
+                    .join('\n');
 
-            const menu = new StringSelectMenuBuilder()
-                .setCustomId('garage_menu')
-                .setPlaceholder('Select a vehicle...')
-                .addOptions(vehicleList);
+                embed.setDescription(
+                    `Select a vehicle from the dropdown menu below to view more details.\n${listText}`
+                );
+                if (totalPages > 1) {
+                    embed.setFooter({
+                        text: `${guildName} • Vehicle Verification • Page ${page} of ${totalPages}`,
+                        iconURL: footerIcon,
+                    });
+                } else {
+                    embed.setFooter({
+                        text: `${guildName} • Vehicle Verification`,
+                        iconURL: footerIcon,
+                    });
+                }
+                return embed;
+            };
 
-            const row = new ActionRowBuilder().addComponents(menu);
+            const buildMenuRow = () => {
+                const vehicleList = buildVehicleList();
+                return new ActionRowBuilder().addComponents(
+                    new StringSelectMenuBuilder()
+                        .setCustomId('garage_menu')
+                        .setPlaceholder('Select a vehicle...')
+                        .addOptions(vehicleList)
+                );
+            };
 
-            const garageMessage = await interaction.editReply({ embeds: [embed], components: [row] });
+            const buildNavRow = () =>
+                new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`garagePrev+${interaction.id}`)
+                        .setLabel('Previous')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setDisabled(page <= 1),
+                    new ButtonBuilder()
+                        .setCustomId(`garageNext+${interaction.id}`)
+                        .setLabel('Next')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setDisabled(page >= totalPages)
+                );
+
+            const rows = totalPages > 1 ? [buildMenuRow(), buildNavRow()] : [buildMenuRow()];
+
+            const garageMessage = await interaction.editReply({ embeds: [buildEmbed()], components: rows });
 
             // Step 3: Set up a collector for dropdown menu interactions (scoped to this message)
             const collector = garageMessage.createMessageComponentCollector({
@@ -67,6 +119,15 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
                 filter: (i) =>
                     i.user.id === interaction.user.id &&
                     i.customId === 'garage_menu' &&
+                    i.message.id === garageMessage.id,
+            });
+
+            const navCollector = garageMessage.createMessageComponentCollector({
+                componentType: ComponentType.Button,
+                time: 60000,
+                filter: (i) =>
+                    i.user.id === interaction.user.id &&
+                    (i.customId === `garagePrev+${interaction.id}` || i.customId === `garageNext+${interaction.id}`) &&
                     i.message.id === garageMessage.id,
             });
 
@@ -100,7 +161,8 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
                     // Stop collector and return vehicle data
                     if (!selectedVehicle?.vehicleImages || selectedVehicle.vehicleImages.length === 0) return;
 
-                    collector.stop();
+                    collector.stop('selected');
+                    navCollector.stop('selected');
                     await require('./garageMenuHandler')(interaction, selectedOption, garageData, user, guildProfile, garageMessage);
                     
                 } catch (error) {
@@ -110,6 +172,21 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
                         ephemeral: true
                     });
                 }
+            });
+
+            navCollector.on('collect', async (btnInteraction) => {
+                await btnInteraction.deferUpdate();
+                if (btnInteraction.customId === `garagePrev+${interaction.id}` && page > 1) {
+                    page -= 1;
+                }
+                if (btnInteraction.customId === `garageNext+${interaction.id}` && page < totalPages) {
+                    page += 1;
+                }
+                const updatedRows = totalPages > 1 ? [buildMenuRow(), buildNavRow()] : [buildMenuRow()];
+                await garageMessage.edit({
+                    embeds: [buildEmbed()],
+                    components: updatedRows,
+                });
             });
 
             collector.on('end', async (_collected, reason) => {

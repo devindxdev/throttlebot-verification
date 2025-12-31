@@ -1,4 +1,4 @@
-const { MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 
 async function displaySearchedVehicle(
     interaction,
@@ -26,17 +26,20 @@ async function displaySearchedVehicle(
     const vehicleName = selection.vehicleData.vehicle;
     const vehicleImages = selection.vehicleData.vehicleImages;
     const vehicleDescription = selection.vehicleData.vehicleDescription;
-    const vehicleEmbedColor = selection.vehicleData.embedColor || embedColor;
+    const vehicleEmbedColor = selection.vehicleData.embedColor || embedColor || '#FFFCFF';
 
     //Vehicle Owner Data
     const userTag = selection.userTag
-    const userAvatar = selection?.userData?.user?.displayAvatarURL({ dynamic: true }) || null;
+    const userAvatar = selection?.userData?.displayAvatarURL?.({ dynamic: true }) || null;
 
     //Misc
     const mainInteractionId = interaction.id;
 
     //Filter
-    const buttonFilter = i => i.user.id === initiatorId && i.guild.id === guildId;
+    const buttonFilter = (i, messageId) =>
+        i.user.id === initiatorId &&
+        i.guildId === guildId &&
+        (!messageId || i.message?.id === messageId);
 
     if(!vehicleImages || vehicleImages.length <=0){
         await interaction.followUp({
@@ -46,7 +49,7 @@ async function displaySearchedVehicle(
         return;
     };
 
-    const vehicleEmbed = new MessageEmbed()
+    const vehicleEmbed = new EmbedBuilder()
     .setAuthor({
         name: `${vehicleName} - Driven By ${userTag}`,
         iconURL: userAvatar
@@ -59,16 +62,16 @@ async function displaySearchedVehicle(
     })
     if(vehicleDescription) vehicleEmbed.setDescription(vehicleDescription);
     let componentsArray = [];
-    const row = new MessageActionRow() 
-    const previousButton = new MessageButton()
+    const row = new ActionRowBuilder() 
+    const previousButton = new ButtonBuilder()
     .setCustomId(`previousVehicleImageSearch+${mainInteractionId}`)
     .setLabel('Previous')
-    .setStyle('PRIMARY')
+    .setStyle(ButtonStyle.Primary)
     .setDisabled(true);
-    const nextButton = new MessageButton()
+    const nextButton = new ButtonBuilder()
     .setCustomId(`nextVehicleImageSearch+${mainInteractionId}`)
     .setLabel('Next')
-    .setStyle('PRIMARY');
+    .setStyle(ButtonStyle.Primary);
     if(vehicleImages.length > 1){
         row.addComponents(previousButton).addComponents(nextButton);
         componentsArray = [row];
@@ -82,7 +85,13 @@ async function displaySearchedVehicle(
         let pages = vehicleImages;
         let page = 1;
         //600000 = 10 minutes.
-        const buttonCollector = interaction.channel.createMessageComponentCollector({ time: 600000, filter: buttonFilter}); 
+        const searchMessage = await interaction.fetchReply().catch(() => null);
+        const messageId = searchMessage?.id;
+        const buttonCollector = interaction.channel.createMessageComponentCollector({
+            time: 600000,
+            componentType: ComponentType.Button,
+            filter: (i) => buttonFilter(i, messageId),
+        }); 
         buttonCollector.on('collect', async (collected) => {
             const buttonId = collected.customId;
             switch(buttonId){
@@ -100,11 +109,11 @@ async function displaySearchedVehicle(
                     if (page >= pages.length){
                         nextButton.setDisabled(true);
                     };
-                    const nextRow = new MessageActionRow() 
+                    const nextRow = new ActionRowBuilder() 
                     nextRow.addComponents(previousButton).addComponents(nextButton);
                     await interaction.editReply({
                         embeds: [vehicleEmbed],
-                        components: [row]
+                        components: [nextRow]
                     });
                     break;
                 case `previousVehicleImageSearch+${mainInteractionId}`:
@@ -121,11 +130,11 @@ async function displaySearchedVehicle(
                     if (page <= 1){
                         previousButton.setDisabled(true);
                     };
-                    const prevRow = new MessageActionRow() 
+                    const prevRow = new ActionRowBuilder() 
                     prevRow.addComponents(previousButton).addComponents(nextButton);
                     await interaction.editReply({
                         embeds: [vehicleEmbed],
-                        components: [row]
+                        components: [prevRow]
                     });
                     break
             };

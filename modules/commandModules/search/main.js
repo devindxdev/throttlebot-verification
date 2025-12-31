@@ -1,8 +1,6 @@
-const { searchGlobal } = require('./searchGlobal.js')
-const { searchExit } = require('./searchExit.js')
 const { searchServer } = require('./searchServer.js')
 const { obtainGuildProfile } = require('../../database.js');
-const { botIcon } = require('../../utility.js')
+const { botIcon, errorEmbed } = require('../../utility.js')
 
 async function vehicleSearch(
     interaction,

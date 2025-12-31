@@ -12,7 +12,7 @@ module.exports = {
             await safeExecute(interaction, async () => {
                 await interaction.deferReply();
                 const initiatorId = interaction.user.id;
-                const embedColor = await defaultEmbedColor(initiatorId);
+                const embedColor = (await defaultEmbedColor(initiatorId)) || '#FFFCFF';
                 const searchTerm = interaction.options.getString('vehicle') || '';
 
                 await vehicleSearch(

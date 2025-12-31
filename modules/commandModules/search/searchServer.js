@@ -1,8 +1,9 @@
-const { MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
-const { botInvite, supportServerInvite, githubLink, ownerTag, ownerAvatar, errorEmbed} = require('../../utility.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
+const { errorEmbed } = require('../../utility.js');
 const garageSchema = require('../../../mongodb_schema/garageSchema.js');
 const { searchSelection } = require('./searchSelection.js');
 const { displaySearchedVehicle } = require('./displaySearchedVehicle.js');
+const { searchExit } = require('./searchExit.js');
 
 async function searchServer(
     interaction,
@@ -24,7 +25,10 @@ async function searchServer(
     const guildIcon = guildData.iconURL({ dynamic: true });	
 
     //Filter
-    const buttonFilter = i => i.user.id === initiatorId && i.guild.id === guildId;
+    const buttonFilter = (i, messageId) =>
+        i.user.id === initiatorId &&
+        i.guildId === guildId &&
+        (!messageId || i.message?.id === messageId);
     
      //Misc
      const mainInteractionId = interaction.id;
@@ -35,52 +39,58 @@ async function searchServer(
     const searchData = await garageSchema.find( { vehicle: { $regex: searchTerm , $options : 'i'} , guildId: guildId} )
     
     if(!searchData || searchData?.length === 0){
-        const searchGlobalData = await garageSchema.find( { vehicle: { $regex: searchTerm , $options : 'i'} } );
-
-        const searchGlobalButton = new MessageButton()
-        .setCustomId(`searchGlobal+${mainInteractionId}`)
-        .setLabel('Search Globally')
-        .setStyle('SECONDARY');
-        const exitButton = new MessageButton()
+        const exitButton = new ButtonBuilder()
         .setCustomId(`searchExit+${mainInteractionId}`)
         .setLabel('Exit')
-        .setStyle('DANGER');
+        .setStyle(ButtonStyle.Danger);
 
-        if(searchGlobalData && searchGlobalData.length > 0){
-            const row = new MessageActionRow() 
+        const searchGlobalData = await garageSchema.find( { vehicle: { $regex: searchTerm , $options : 'i'} } );
+
+        if(!searchGlobalData || searchGlobalData.length === 0){
+            const row = new ActionRowBuilder() 
             .addComponents(exitButton);
             await interaction.editReply({
-                embeds:[errorEmbed(`The server-wide search returned no results.`,initiatorAvatar)],
+                embeds:[errorEmbed(`No results found for **${searchTerm || 'your search'}** across all servers.`,initiatorAvatar)],
                 components: [row]
             });
-            //Globally ${searchGlobalData.length.toLocaleString()} results were found. Click on the **Search Global** button to view them.
-            //Setup await interaction for the button and route to search global.
-        }else{
-            const row = new MessageActionRow() 
-            .addComponents(exitButton);
-            await interaction.editReply({
-                embeds:[errorEmbed(`The server-wide search returned no results.`,initiatorAvatar)],
-                components: [row]
-            });
-        };
-
-        //Checking for the button responses, if any.
-        const buttonCollected = await interaction.channel.awaitMessageComponent({ filter: buttonFilter, componentType: 'BUTTON', time: 60000, max: 1 })
-        .catch(e => {});
-
-        if(!buttonCollected){
-            await interaction.deleteReply();
-            return; 
-        };
-        const buttonId = buttonCollected.customId;
-        switch(buttonId){
-            case `searchGlobal+${mainInteractionId}`:
-                searchGlobal();
-                break;
-            case `searchExit+${mainInteractionId}`:
+            const searchMessage = await interaction.fetchReply().catch(() => null);
+            const messageId = searchMessage?.id;
+            const buttonCollected = await interaction.channel.awaitMessageComponent({
+                filter: (i) => buttonFilter(i, messageId),
+                componentType: ComponentType.Button,
+                time: 60000,
+                max: 1
+            }).catch(() => null);
+            if (buttonCollected?.customId === `searchExit+${mainInteractionId}`) {
+                await buttonCollected.deferUpdate();
                 searchExit(interaction);
-                break;
-        };
+            }
+            return;
+        }
+
+        const selectedGlobalVehicle = await searchSelection(
+            interaction,
+            guildData,
+            initiatorData,
+            footerData,
+            embedColor,
+            searchTerm,
+            searchGlobalData,
+            'global',
+            false
+        );
+        if (!selectedGlobalVehicle) return;
+        displaySearchedVehicle(
+            interaction,
+            guildData,
+            initiatorData,
+            footerData,
+            embedColor,
+            searchTerm,
+            searchGlobalData,
+            'global',
+            selectedGlobalVehicle
+        );
         return;
     };
 
@@ -92,8 +102,44 @@ async function searchServer(
         embedColor,
         searchTerm,
         searchData,
-        'server'
+        'server',
+        true
     );
+    if (!selectedVehicle) return;
+    if (selectedVehicle.action === 'global') {
+        const searchGlobalData = await garageSchema.find( { vehicle: { $regex: searchTerm , $options : 'i'} } );
+        if (!searchGlobalData || searchGlobalData.length === 0) {
+            await interaction.editReply({
+                embeds:[errorEmbed(`The search returned no results.`,initiatorAvatar)],
+                components: []
+            });
+            return;
+        }
+        const selectedGlobalVehicle = await searchSelection(
+            interaction,
+            guildData,
+            initiatorData,
+            footerData,
+            embedColor,
+            searchTerm,
+            searchGlobalData,
+            'global',
+            false
+        );
+        if (!selectedGlobalVehicle) return;
+        displaySearchedVehicle(
+            interaction,
+            guildData,
+            initiatorData,
+            footerData,
+            embedColor,
+            searchTerm,
+            searchGlobalData,
+            'global',
+            selectedGlobalVehicle
+        );
+        return;
+    }
     displaySearchedVehicle(
         interaction,
         guildData,
