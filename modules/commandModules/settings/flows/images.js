@@ -193,7 +193,7 @@ module.exports = async function imagesFlow(triggerInteraction, ctx) {
                 });
                 return;
             }
-
+            console.log(uploadedFile)
             const iconUrl = uploadedFile.url;
             const fileSize = uploadedFile.size ?? 0;
             const mimeType = uploadedFile.contentType?.toLowerCase() ?? '';
