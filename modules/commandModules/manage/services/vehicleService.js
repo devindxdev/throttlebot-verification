@@ -1,10 +1,12 @@
 const garageSchema = require('../../../../mongodb_schema/garageSchema.js');
+const { extractVehicleMeta } = require('../../../vehicleUtils.js');
 
 /** Updates a vehicle name for the given user/guild tuple. */
 async function updateVehicleName({ guildId, userId, currentName, newName }) {
+    const vehicleMeta = extractVehicleMeta(newName);
     return garageSchema.updateOne(
         { guildId, userId, vehicle: currentName },
-        { $set: { vehicle: newName } }
+        { $set: { vehicle: newName, vehicleBrand: vehicleMeta.brand, vehicleModel: vehicleMeta.model } }
     );
 }
 

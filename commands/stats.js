@@ -28,7 +28,12 @@ module.exports = {
             const scope = interaction.options.getString('scope') || 'server';
             const guildId = interaction.guild?.id || null;
 
-            const entries = await buildStatsEmbeds({ scope, guildId, guildName: interaction.guild?.name || 'Server' });
+            const entries = await buildStatsEmbeds({
+                scope,
+                guildId,
+                guildName: interaction.guild?.name || 'Server',
+                client: interaction.client,
+            });
             if (!entries || entries.length === 0) {
                 await interaction.editReply('No stats available yet.');
                 return;

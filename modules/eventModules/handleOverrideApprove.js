@@ -6,6 +6,7 @@ const { obtainGuildProfile, obtainUserProfile } = require('../database.js');
 const { errorEmbed } = require('../utility.js');
 const { greenColor } = require('../constants.js');
 const mongoose = require('mongoose');
+const { resolveBrandFields } = require('../vehicleUtils.js');
 
 /**
  * Overrides an auto-denied application and approves it.
@@ -67,6 +68,11 @@ module.exports = async function handleOverrideApprove(interaction) {
         if (!application) throw new Error('No auto-denied application found for this message.');
 
         const { userId, vehicle, vehicleImageURL, vehicleImageProxyURL } = application;
+        const brandMeta = resolveBrandFields({
+            vehicleName: vehicle,
+            vehicleBrand: application.vehicleBrand,
+            vehicleModel: application.vehicleModel,
+        });
 
         // Create or ensure user profile exists
         let userProfile = await obtainUserProfile(userId);
@@ -91,6 +97,8 @@ module.exports = async function handleOverrideApprove(interaction) {
                 guildId,
                 userId,
                 vehicle,
+                vehicleBrand: brandMeta.brand,
+                vehicleModel: brandMeta.model,
                 vehicleImages: [],
                 vehicleDescription: null,
                 vehicleAddedDate: new Date().toISOString(),
@@ -98,6 +106,11 @@ module.exports = async function handleOverrideApprove(interaction) {
                 embedColor: null,
             });
             await newRide.save();
+        } else if (!existingRide.vehicleBrand && brandMeta.brand) {
+            await garageSchema.updateOne(
+                { _id: existingRide._id },
+                { $set: { vehicleBrand: brandMeta.brand, vehicleModel: brandMeta.model } }
+            );
         }
 
         // Update application status
@@ -109,6 +122,8 @@ module.exports = async function handleOverrideApprove(interaction) {
                     decision: 'overridden-approved',
                     decidedBy: moderatorId,
                     decidedOn: new Date().toISOString(),
+                    vehicleBrand: application.vehicleBrand || brandMeta.brand,
+                    vehicleModel: application.vehicleModel || brandMeta.model,
                 },
             }
         );

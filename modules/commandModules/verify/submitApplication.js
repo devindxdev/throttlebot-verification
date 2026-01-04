@@ -16,6 +16,7 @@ const { obtainUserProfile } = require('../../database.js');
 const { greenColor } = require('../../constants.js');
 const { getEstimatedETA } = require('../../database.js');
 const runAiAnalysis = require('./aiAnalysis.js');
+const { extractVehicleMeta } = require('../../vehicleUtils.js');
 
 module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfile) => {
     const { verificationChannelId, loggingChannelId, customFooterIcon } = guildProfile;
@@ -40,6 +41,7 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
     const { id: initiatorId, tag: initiatorTag } = initiator;
 
     const eta = await getEstimatedETA(interaction.guild.id);
+    const vehicleMeta = extractVehicleMeta(vehicleName);
 
     // Attempt AI auto-analysis if enabled
     if (guildProfile.geminiAnalysisEnabled && isImage) {
@@ -76,6 +78,7 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
                         loggingChannel,
                         verificationChannel,
                         initiator,
+                        vehicleMeta,
                         analysis: analysisResult.analysis || null,
                     });
                     return;
@@ -90,6 +93,7 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
                         loggingChannel,
                         verificationChannel,
                         initiator,
+                        vehicleMeta,
                         analysis: analysisResult.analysis,
                     });
                     return;
@@ -169,6 +173,8 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
             guildId: interaction.guild.id,
             userId: initiatorId,
             vehicle: vehicleName,
+            vehicleBrand: vehicleMeta.brand,
+            vehicleModel: vehicleMeta.model,
             vehicleImageURL: vehicleAttachment.url,
             vehicleImageProxyURL: vehicleAttachment.url,
             vehicleImageName: vehicleAttachment.name,
@@ -228,7 +234,7 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
         });
     };
 
-async function autoApproveApplication({ interaction, guildProfile, vehicleName, vehicleAttachment, loggingChannel, verificationChannel, initiator, analysis }) {
+async function autoApproveApplication({ interaction, guildProfile, vehicleName, vehicleAttachment, loggingChannel, verificationChannel, initiator, analysis, vehicleMeta }) {
     const { id: initiatorId, tag: initiatorTag } = initiator;
     const guildId = interaction.guild.id;
 
@@ -253,6 +259,8 @@ async function autoApproveApplication({ interaction, guildProfile, vehicleName, 
         guildId,
         userId: initiatorId,
         vehicle: vehicleName,
+        vehicleBrand: vehicleMeta?.brand || null,
+        vehicleModel: vehicleMeta?.model || null,
         vehicleImages: [],
         vehicleDescription: null,
         vehicleAddedDate: new Date().toISOString(),
@@ -290,6 +298,8 @@ async function autoApproveApplication({ interaction, guildProfile, vehicleName, 
         guildId,
         userId: initiatorId,
         vehicle: vehicleName,
+        vehicleBrand: vehicleMeta?.brand || null,
+        vehicleModel: vehicleMeta?.model || null,
         vehicleImageURL: vehicleAttachment.url,
         vehicleImageProxyURL: vehicleAttachment.url,
         vehicleImageName: vehicleAttachment.name,
@@ -338,7 +348,7 @@ async function autoApproveApplication({ interaction, guildProfile, vehicleName, 
     await interaction.editReply({ embeds: [confirmationEmbed], components: [] });
 }
 
-async function autoDenyApplication({ interaction, guildProfile, vehicleName, vehicleAttachment, loggingChannel, verificationChannel, initiator, analysis }) {
+async function autoDenyApplication({ interaction, guildProfile, vehicleName, vehicleAttachment, loggingChannel, verificationChannel, initiator, analysis, vehicleMeta }) {
     const { id: initiatorId, tag: initiatorTag } = initiator;
     const guildId = interaction.guild.id;
     const issues = Array.isArray(analysis?.issues) ? analysis.issues.slice(0, 5).join('\n• ') : null;
@@ -367,6 +377,8 @@ async function autoDenyApplication({ interaction, guildProfile, vehicleName, veh
         guildId,
         userId: initiatorId,
         vehicle: vehicleName,
+        vehicleBrand: vehicleMeta?.brand || null,
+        vehicleModel: vehicleMeta?.model || null,
         vehicleImageURL: vehicleAttachment.url,
         vehicleImageProxyURL: vehicleAttachment.url,
         vehicleImageName: vehicleAttachment.name,

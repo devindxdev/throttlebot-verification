@@ -7,6 +7,7 @@ const { errorEmbed } = require('../utility.js');
 const { greenColor } = require('../constants.js');
 const moment = require('moment');
 const mongoose = require('mongoose');
+const { resolveBrandFields } = require('../vehicleUtils.js');
 
 module.exports = async function handleApproval(interaction) {
     try {
@@ -38,6 +39,11 @@ module.exports = async function handleApproval(interaction) {
 
         if (!applicationData) throw new Error('No open verification application found for this message.');
         const { userId, vehicle, vehicleImageProxyURL, vehicleImageURL } = applicationData;
+        const brandMeta = resolveBrandFields({
+            vehicleName: vehicle,
+            vehicleBrand: applicationData.vehicleBrand,
+            vehicleModel: applicationData.vehicleModel,
+        });
 
         // Create or update the user's profile
         let userProfile = await obtainUserProfile(userId);
@@ -63,6 +69,8 @@ module.exports = async function handleApproval(interaction) {
                     decision: 'approved',
                     decidedBy: initiatorId,
                     decidedOn: todaysDate,
+                    vehicleBrand: applicationData.vehicleBrand || brandMeta.brand,
+                    vehicleModel: applicationData.vehicleModel || brandMeta.model,
                 },
             }
         );
@@ -75,6 +83,8 @@ module.exports = async function handleApproval(interaction) {
                 guildId,
                 userId,
                 vehicle,
+                vehicleBrand: brandMeta.brand,
+                vehicleModel: brandMeta.model,
                 vehicleImages: [],
                 vehicleDescription: null,
                 vehicleAddedDate: todaysDate,
@@ -82,6 +92,11 @@ module.exports = async function handleApproval(interaction) {
                 embedColor: null,
             });
             await newVerifiedRide.save();
+        } else if (!existingRide.vehicleBrand && brandMeta.brand) {
+            await garageSchema.updateOne(
+                { _id: existingRide._id },
+                { $set: { vehicleBrand: brandMeta.brand, vehicleModel: brandMeta.model } }
+            );
         }
 
         // Update the embed in the interaction message

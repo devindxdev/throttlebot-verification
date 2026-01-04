@@ -8,6 +8,8 @@ const verificationApplication = new mongoose.Schema(
     guildId: { type: String, required: true, index: true },
     userId: { type: String, required: true, index: true },
     vehicle: { type: String, required: true },
+    vehicleBrand: { type: String, default: null, index: true },
+    vehicleModel: { type: String, default: null },
     vehicleImageURL: { type: String, default: null },
     vehicleImageProxyURL: { type: String, default: null },
     vehicleImageName: { type: String, default: null },

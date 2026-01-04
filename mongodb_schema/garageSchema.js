@@ -8,6 +8,8 @@ const garageSchema = new mongoose.Schema(
     guildId: { type: String, required: true, index: true },
     userId: { type: String, required: true, index: true },
     vehicle: { type: String, required: true },
+    vehicleBrand: { type: String, default: null, index: true },
+    vehicleModel: { type: String, default: null },
     vehicleImages: { type: [String], default: [] },
     vehicleDescription: { type: String, default: null },
     vehicleAddedDate: { type: Date, default: Date.now },

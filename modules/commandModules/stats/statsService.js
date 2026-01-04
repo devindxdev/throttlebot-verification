@@ -1,15 +1,28 @@
 const verificationSchema = require('../../../mongodb_schema/verificationApplicationSchema.js');
 const garageSchema = require('../../../mongodb_schema/garageSchema.js');
+const { resolveBrandFields } = require('../../vehicleUtils.js');
 
 const QUICKCHART_BASE = 'https://quickchart.io/chart?c=';
 const COLORS = {
-    primary: '#5865F2',
-    success: '#77DD77',
-    danger: '#FF6961',
-    accent: '#FDD66A',
+    primary: '#FF6961', // core bot red
+    secondary: '#FF9C92', // lighter red
+    soft: '#FFE8E6', // very light red
+    accent: '#FFFCFF', // off-white
+    text: '#333333',
+    blue: '#4A90E2', // distinct for overrides
+    dark: '#2C3E50', // dark for contrast
 };
 
-async function buildStatsEmbeds({ scope, guildId, guildName }) {
+const VEHICLE_BRAND_PREFIXES = new Set([
+    'acura', 'alfa', 'alfa romeo', 'aston', 'aston martin', 'audi', 'bentley', 'bmw', 'buick', 'cadillac',
+    'chevrolet', 'chevy', 'chrysler', 'dodge', 'ferrari', 'fiat', 'ford', 'gmc', 'genesis', 'honda', 'hummer',
+    'hyundai', 'infiniti', 'jaguar', 'jeep', 'kia', 'lamborghini', 'land', 'land rover', 'lexus', 'lincoln',
+    'maserati', 'mazda', 'mclaren', 'mercedes', 'mercedes benz', 'mercedes-benz', 'mini', 'mitsubishi', 'nissan',
+    'oldsmobile', 'polestar', 'pontiac', 'porsche', 'ram', 'rolls', 'rolls royce', 'saab', 'saturn', 'scion',
+    'subaru', 'tesla', 'toyota', 'volkswagen', 'vw', 'volvo',
+]);
+
+async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
     const matchScope = scope === 'server' && guildId ? { guildId } : {};
 
     const [
@@ -17,6 +30,7 @@ async function buildStatsEmbeds({ scope, guildId, guildName }) {
         approvalRates,
         aiStats,
         turnaround,
+        brandApproval,
         topBrands,
         topVehicles,
         topUsers,
@@ -25,9 +39,10 @@ async function buildStatsEmbeds({ scope, guildId, guildName }) {
         approvalDenialRate(matchScope),
         aiApprovalStats(matchScope),
         averageTurnaround(matchScope),
+        brandApprovalRates(matchScope),
         mostCommonBrands(matchScope),
         mostPopularVehicles(matchScope),
-        topUsersByVehicles(matchScope),
+        topUsersByVehicles(matchScope, client),
     ]);
 
     const scopeText = scopeLabel(scope, guildName);
@@ -39,10 +54,14 @@ async function buildStatsEmbeds({ scope, guildId, guildName }) {
             embed: buildEmbed({
                 title: `Verifications Over Time (${scopeText})`,
                 description: 'Annual counts of approvals and denials (since the start).',
-                imageUrl: lineChart(timeSeries.labels, [
-                    { label: 'Approved', data: timeSeries.approved, color: COLORS.success },
-                    { label: 'Denied', data: timeSeries.denied, color: COLORS.danger },
-                ]),
+                imageUrl: lineChart(
+                    timeSeries.labels,
+                    [
+                        { label: 'Approved', data: timeSeries.approved, color: COLORS.primary },
+                        { label: 'Denied', data: timeSeries.denied, color: COLORS.secondary },
+                    ],
+                    { xLabel: 'Year', yLabel: 'Applications' }
+                ),
             }),
         },
         {
@@ -54,7 +73,7 @@ async function buildStatsEmbeds({ scope, guildId, guildName }) {
                 imageUrl: pieChart(
                     ['Approved', 'Denied'],
                     [approvalRates.approved, approvalRates.denied],
-                    [COLORS.success, COLORS.danger]
+                    [COLORS.primary, COLORS.secondary]
                 ),
             }),
         },
@@ -67,8 +86,22 @@ async function buildStatsEmbeds({ scope, guildId, guildName }) {
                 imageUrl: pieChart(
                     ['AI Approved', 'AI Denied', 'Override (Approved→Denied)', 'Override (Denied→Approved)'],
                     [aiStats.autoApproved, aiStats.autoDenied, aiStats.overrideToDenied, aiStats.overrideToApproved],
-                    [COLORS.success, COLORS.danger, COLORS.accent, COLORS.primary]
+                    [COLORS.primary, COLORS.secondary, COLORS.dark, COLORS.blue]
                 ),
+            }),
+        },
+        {
+            key: 'brand_approval',
+            label: 'Brand Approval Rate',
+            embed: buildEmbed({
+                title: `Brand Approval Rate (${scopeText})`,
+                description: 'Top brands by approval percentage (min 3 decisions).',
+                imageUrl: barChart(brandApproval.labels, brandApproval.rates, COLORS.primary, {
+                    xLabel: 'Approval %',
+                    yLabel: 'Brand (decisions)',
+                    datasetLabel: 'Approval %',
+                    xMax: 100,
+                }),
             }),
         },
         {
@@ -76,10 +109,12 @@ async function buildStatsEmbeds({ scope, guildId, guildName }) {
             label: 'Average Turnaround',
             embed: buildEmbed({
                 title: `Average Turnaround (${scopeText})`,
-                description: 'Average hours from submit to decision (last 30 days).',
-                imageUrl: lineChart(turnaround.labels, [
-                    { label: 'Avg Hours', data: turnaround.hours, color: COLORS.primary },
-                ]),
+                description: 'Average hours from submit to decision (by decision month, last 5 months).',
+                imageUrl: lineChart(
+                    turnaround.labels,
+                    [{ label: 'Avg Hours', data: turnaround.hours, color: COLORS.primary }],
+                    { xLabel: 'Month', yLabel: 'Hours' }
+                ),
             }),
         },
         {
@@ -88,7 +123,11 @@ async function buildStatsEmbeds({ scope, guildId, guildName }) {
             embed: buildEmbed({
                 title: `Top Brands (${scopeText})`,
                 description: 'Most common brands by count.',
-                imageUrl: barChart(topBrands.labels, topBrands.counts, COLORS.primary),
+                imageUrl: barChart(topBrands.labels, topBrands.counts, COLORS.primary, {
+                    xLabel: 'Num of vehicles',
+                    yLabel: 'Brand',
+                    datasetLabel: 'Vehicles',
+                }),
             }),
         },
         {
@@ -97,7 +136,11 @@ async function buildStatsEmbeds({ scope, guildId, guildName }) {
             embed: buildEmbed({
                 title: `Most Popular Vehicles (${scopeText})`,
                 description: 'Top vehicles by count.',
-                imageUrl: barChart(topVehicles.labels, topVehicles.counts, COLORS.accent),
+                imageUrl: barChart(topVehicles.labels, topVehicles.counts, COLORS.secondary, {
+                    xLabel: 'Num of vehicles',
+                    yLabel: 'Vehicle',
+                    datasetLabel: 'Vehicles',
+                }),
             }),
         },
         {
@@ -106,7 +149,11 @@ async function buildStatsEmbeds({ scope, guildId, guildName }) {
             embed: buildEmbed({
                 title: `Top Users (${scopeText})`,
                 description: 'Users with the most verified vehicles.',
-                imageUrl: barChart(topUsers.labels, topUsers.counts, COLORS.success),
+                imageUrl: barChart(topUsers.labels, topUsers.counts, COLORS.primary, {
+                    xLabel: 'Num of vehicles',
+                    yLabel: 'User',
+                    datasetLabel: 'Vehicles',
+                }),
             }),
         },
     ];
@@ -117,7 +164,7 @@ function buildEmbed({ title, description, imageUrl }) {
         title,
         description,
         image: { url: imageUrl },
-        color: 0x5865F2,
+        color: 0xFFFCFF,
         footer: { text: 'Live stats • ThrottleBot Verification' },
     };
 }
@@ -217,56 +264,69 @@ async function verificationsOverTime(matchScope) {
 }
 
 async function approvalDenialRate(matchScope) {
-    const data = await verificationSchema.aggregate([
-        { $match: matchScope },
-        {
-            $project: {
-                decisionBucket: {
-                    $cond: [
-                        {
-                            $or: [
-                                { $eq: ['$decision', 'approved'] },
-                                { $eq: ['$status', 'auto-approved'] },
-                            ],
-                        },
-                        'approved',
-                        'denied',
-                    ],
-                },
-            },
-        },
-        { $group: { _id: '$decisionBucket', count: { $sum: 1 } } },
-    ]);
+    const applications = await verificationSchema.find(matchScope).select('decision status').lean();
+    let approved = 0;
+    let denied = 0;
 
-    return {
-        approved: data.find((d) => d._id === 'approved')?.count || 0,
-        denied: data.find((d) => d._id === 'denied')?.count || 0,
-    };
+    applications.forEach((app) => {
+        const bucket = decisionBucket(app.decision, app.status);
+        if (bucket === 'approved') approved += 1;
+        if (bucket === 'denied') denied += 1;
+    });
+
+    return { approved, denied };
 }
 
 async function aiApprovalStats(matchScope) {
-    const data = await verificationSchema.aggregate([
-        { $match: matchScope },
-        {
-            $group: {
-                _id: '$decision',
-                count: { $sum: 1 },
-            },
-        },
-    ]);
+    const applications = await verificationSchema
+        .find(matchScope)
+        .select('decision status decidedBy')
+        .lean();
 
-    return {
-        autoApproved: data.filter((d) => ['auto-approved'].includes(d._id)).reduce((a, b) => a + b.count, 0),
-        autoDenied: data.filter((d) => ['auto-denied'].includes(d._id)).reduce((a, b) => a + b.count, 0),
-        overrideToDenied: data.filter((d) => ['overridden-denied'].includes(d._id)).reduce((a, b) => a + b.count, 0),
-        overrideToApproved: data.filter((d) => ['overridden-approved'].includes(d._id)).reduce((a, b) => a + b.count, 0),
-    };
+    let autoApproved = 0;
+    let autoDenied = 0;
+    let overrideToDenied = 0;
+    let overrideToApproved = 0;
+
+    applications.forEach((app) => {
+        if (app.decision === 'overridden-denied') {
+            overrideToDenied += 1;
+            return;
+        }
+        if (app.decision === 'overridden-approved') {
+            overrideToApproved += 1;
+            return;
+        }
+
+        const isAutoApproved =
+            app.status === 'auto-approved' ||
+            app.decision === 'auto-approved' ||
+            (app.decidedBy === 'ai-auto' && app.decision === 'approved');
+        const isAutoDenied =
+            app.status === 'auto-denied' ||
+            app.decision === 'auto-denied' ||
+            (app.decidedBy === 'ai-auto' && app.decision === 'denied');
+
+        if (isAutoApproved) autoApproved += 1;
+        else if (isAutoDenied) autoDenied += 1;
+    });
+
+    return { autoApproved, autoDenied, overrideToDenied, overrideToApproved };
 }
 
 async function averageTurnaround(matchScope) {
     const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 30);
-    const match = { ...matchScope, decidedOn: { $ne: null } };
+    cutoff.setMonth(cutoff.getMonth() - 4);
+    cutoff.setDate(1);
+    cutoff.setHours(0, 0, 0, 0);
+
+    // Mirror ETA logic: only consider decided applications with approved/denied decisions
+    const match = {
+        ...matchScope,
+        decidedOn: { $ne: null },
+        decision: { $in: ['approved', 'denied'] },
+    };
+
     const data = await verificationSchema.aggregate([
         { $match: match },
         {
@@ -279,74 +339,146 @@ async function averageTurnaround(matchScope) {
             $match: {
                 submittedDate: { $type: 'date' },
                 decidedDate: { $type: 'date' },
-                submittedDate: { $gte: cutoff },
+                decidedDate: { $gte: cutoff },
             },
         },
         {
             $project: {
-                day: 1,
+                decidedMonth: {
+                    $dateTrunc: {
+                        date: '$decidedDate',
+                        unit: 'month',
+                    },
+                },
                 turnaroundMs: { $subtract: ['$decidedDate', '$submittedDate'] },
             },
         },
+        { $match: { turnaroundMs: { $gte: 0 } } },
         {
             $group: {
-                _id: '$day',
+                _id: '$decidedMonth',
                 avgMs: { $avg: '$turnaroundMs' },
             },
         },
+        { $sort: { _id: 1 } },
     ]);
 
-    const days = Array.from({ length: 30 }).map((_, idx) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (29 - idx));
-        return d.toISOString().slice(0, 10);
-    });
+    const months = [];
+    const start = startOfMonth(new Date());
+    for (let i = 4; i >= 0; i -= 1) {
+        const d = new Date(start);
+        d.setMonth(d.getMonth() - i);
+        months.push(d);
+    }
 
-    const hours = days.map((day) => {
-        const record = data.find((d) => d._id === day);
-        return record ? Math.max(0, record.avgMs / 1000 / 60 / 60) : 0;
-    });
+    const dataMap = new Map(
+        data.map((d) => [
+            new Date(d._id).toISOString().slice(0, 7),
+            Math.max(0, d.avgMs / 1000 / 60 / 60),
+        ])
+    );
 
-    return { labels: days, hours };
+    const labels = months.map((d) => d.toISOString().slice(0, 7));
+    const hours = labels.map((label) => dataMap.get(label) || 0);
+
+    return { labels, hours };
+}
+
+async function brandApprovalRates(matchScope) {
+    const applications = await verificationSchema
+        .find(matchScope)
+        .select('vehicle vehicleBrand vehicleModel decision status')
+        .lean();
+
+    const brandStats = new Map();
+
+    for (const app of applications) {
+        const meta = resolveBrandFields({
+            vehicleName: app.vehicle,
+            vehicleBrand: app.vehicleBrand,
+            vehicleModel: app.vehicleModel,
+        });
+        if (!meta.brandKey) continue;
+
+        const bucket = brandStats.get(meta.brandKey) || { label: meta.brand || 'Unknown', approved: 0, total: 0 };
+        const decision = decisionBucket(app.decision, app.status);
+        if (!decision) continue;
+
+        if (decision === 'approved') bucket.approved += 1;
+        bucket.total += 1;
+        if (!bucket.label && meta.brand) bucket.label = meta.brand;
+        brandStats.set(meta.brandKey, bucket);
+    }
+
+    const ranked = Array.from(brandStats.values())
+        .filter((b) => b.total >= 3)
+        .sort((a, b) => {
+            const rateA = a.approved / a.total;
+            const rateB = b.approved / b.total;
+            if (rateA === rateB) return b.total - a.total;
+            return rateB - rateA;
+        })
+        .slice(0, 10);
+
+    return {
+        labels: ranked.map((b) => `${b.label} (${b.total})`),
+        rates: ranked.map((b) => Math.round((b.approved / b.total) * 100)),
+    };
 }
 
 async function mostCommonBrands(matchScope) {
-    const vehicles = await garageSchema.aggregate([
-        { $match: matchScope },
-        {
-            $project: {
-                brand: {
-                    $trim: {
-                        input: { $arrayElemAt: [{ $split: ['$vehicle', ' '] }, 0] },
-                    },
-                },
-            },
-        },
-        { $match: { brand: { $ne: null, $ne: '' } } },
-        { $group: { _id: '$brand', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
-    ]);
+    const vehicles = await garageSchema.find(matchScope).select('vehicle vehicleBrand vehicleModel').lean();
+    const brandCounts = new Map();
 
-    const labels = vehicles.map((v) => v._id);
-    const counts = vehicles.map((v) => v.count);
-    return { labels, counts };
+    for (const vehicle of vehicles) {
+        const meta = resolveBrandFields({
+            vehicleName: vehicle.vehicle,
+            vehicleBrand: vehicle.vehicleBrand,
+            vehicleModel: vehicle.vehicleModel,
+        });
+        if (!meta.brandKey) continue;
+
+        const bucket = brandCounts.get(meta.brandKey) || { label: meta.brand || 'Unknown', count: 0 };
+        if (!bucket.label && meta.brand) bucket.label = meta.brand;
+        bucket.count += 1;
+        brandCounts.set(meta.brandKey, bucket);
+    }
+
+    const sorted = Array.from(brandCounts.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+    return {
+        labels: sorted.map((b) => b.label),
+        counts: sorted.map((b) => b.count),
+    };
 }
 
 async function mostPopularVehicles(matchScope) {
-    const vehicles = await garageSchema.aggregate([
-        { $match: matchScope },
-        { $group: { _id: '$vehicle', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
-    ]);
+    const vehicles = await garageSchema.find(matchScope).select('vehicle').lean();
+    const counts = new Map();
 
-    const labels = vehicles.map((v) => v._id);
-    const counts = vehicles.map((v) => v.count);
-    return { labels, counts };
+    for (const v of vehicles) {
+        const raw = typeof v.vehicle === 'string' ? v.vehicle : '';
+        const key = normalizeVehicleKey(raw);
+        if (!key) continue;
+        const existing = counts.get(key) || { count: 0, sample: raw || key };
+        existing.count += 1;
+        counts.set(key, existing);
+    }
+
+    const sorted = Array.from(counts.entries())
+        .map(([key, value]) => ({ key, ...value }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+    return {
+        labels: sorted.map((v) => v.sample || v.key),
+        counts: sorted.map((v) => v.count),
+    };
 }
 
-async function topUsersByVehicles(matchScope) {
+async function topUsersByVehicles(matchScope, client) {
     const users = await garageSchema.aggregate([
         { $match: matchScope },
         { $group: { _id: '$userId', count: { $sum: 1 } } },
@@ -354,16 +486,20 @@ async function topUsersByVehicles(matchScope) {
         { $limit: 10 },
     ]);
 
-    const labels = users.map((u) => u._id);
+    const userIds = users.map((u) => u._id);
+    const labelMap = await resolveUserLabels(userIds, client);
+
+    const labels = users.map((u) => labelMap.get(u._id) || u._id);
     const counts = users.map((u) => u.count);
     return { labels, counts };
 }
 
-function lineChart(labels, datasets) {
+function lineChart(labels, datasets, options = {}) {
     const safeLabels = labels.length ? labels : ['No Data'];
     const safeDatasets = datasets.map((d) => ({
         ...d,
         data: d.data.length ? d.data : [0],
+        label: d.label || 'Series',
     }));
     const config = {
         type: 'line',
@@ -380,18 +516,26 @@ function lineChart(labels, datasets) {
         },
         options: {
             plugins: {
-                legend: { position: 'bottom', labels: { color: '#eaeaea' } },
+                legend: { position: 'bottom', labels: { color: COLORS.text } },
             },
             scales: {
-                x: { ticks: { color: '#eaeaea', maxTicksLimit: 6 }, grid: { color: 'rgba(234,234,234,0.1)' } },
-                y: { ticks: { color: '#eaeaea' }, grid: { color: 'rgba(234,234,234,0.1)' } },
+                x: {
+                    ticks: { color: COLORS.text, maxTicksLimit: 6 },
+                    grid: { color: 'rgba(51,51,51,0.08)' },
+                    title: options.xLabel ? { display: true, text: options.xLabel, color: COLORS.text } : undefined,
+                },
+                y: {
+                    ticks: { color: COLORS.text },
+                    grid: { color: 'rgba(51,51,51,0.08)' },
+                    title: options.yLabel ? { display: true, text: options.yLabel, color: COLORS.text } : undefined,
+                },
             },
         },
     };
     return QUICKCHART_BASE + encodeURIComponent(JSON.stringify(config));
 }
 
-function barChart(labels, data, color) {
+function barChart(labels, data, color, options = {}) {
     const safeLabels = labels.length ? labels : ['No Data'];
     const safeData = data.length ? data : [0];
     const config = {
@@ -402,15 +546,26 @@ function barChart(labels, data, color) {
                 {
                     data: safeData,
                     backgroundColor: color,
+                    label: options.datasetLabel || '',
                 },
             ],
         },
         options: {
             indexAxis: 'y',
-            plugins: { legend: { display: false } },
+            plugins: { legend: { display: Boolean(options.datasetLabel && options.displayLegend !== false) } },
             scales: {
-                x: { ticks: { color: '#eaeaea', maxTicksLimit: 6 }, grid: { color: 'rgba(234,234,234,0.1)' } },
-                y: { ticks: { color: '#eaeaea' }, grid: { color: 'rgba(234,234,234,0.1)' } },
+                x: {
+                    ticks: { color: COLORS.text, maxTicksLimit: 6 },
+                    grid: { color: 'rgba(51,51,51,0.08)' },
+                    title: options.xLabel ? { display: true, text: options.xLabel, color: COLORS.text } : undefined,
+                    max: typeof options.xMax === 'number' ? options.xMax : undefined,
+                    min: typeof options.xMin === 'number' ? options.xMin : undefined,
+                },
+                y: {
+                    ticks: { color: COLORS.text },
+                    grid: { color: 'rgba(51,51,51,0.08)' },
+                    title: options.yLabel ? { display: true, text: options.yLabel, color: COLORS.text } : undefined,
+                },
             },
         },
     };
@@ -431,11 +586,76 @@ function pieChart(labels, data, colors) {
         },
         options: {
             plugins: {
-                legend: { position: 'bottom', labels: { color: '#eaeaea' } },
+                legend: { position: 'bottom', labels: { color: COLORS.text } },
             },
         },
     };
     return QUICKCHART_BASE + encodeURIComponent(JSON.stringify(config));
+}
+
+function startOfMonth(date) {
+    const d = new Date(date);
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+function decisionBucket(decision, status) {
+    const approvedStates = ['approved', 'overridden-approved', 'auto-approved'];
+    const deniedStates = ['denied', 'overridden-denied', 'auto-denied'];
+    if (approvedStates.includes(decision) || approvedStates.includes(status)) return 'approved';
+    if (deniedStates.includes(decision) || deniedStates.includes(status)) return 'denied';
+    return null;
+}
+
+async function resolveUserLabels(userIds, client) {
+    const map = new Map();
+    if (!Array.isArray(userIds) || userIds.length === 0) return map;
+    if (!client?.users?.fetch) {
+        userIds.forEach((id) => map.set(id, id));
+        return map;
+    }
+
+    await Promise.all(
+        userIds.map(async (id) => {
+            try {
+                const user = await client.users.fetch(id);
+                const label = user.globalName || user.username || id;
+                map.set(id, label);
+            } catch {
+                map.set(id, id);
+            }
+        })
+    );
+
+    return map;
+}
+
+function normalizeVehicleKey(vehicle = '') {
+    if (!vehicle || typeof vehicle !== 'string') return null;
+    const cleaned = vehicle.replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (!cleaned) return null;
+    let tokens = cleaned.split(' ');
+
+    // Remove leading year/number tokens
+    while (tokens.length && (/^\d{2,4}$/.test(tokens[0]) || /^\d+$/.test(tokens[0]))) {
+        tokens.shift();
+    }
+
+    if (!tokens.length) return cleaned;
+
+    // Drop brand prefixes (handles multi-word brands)
+    for (let i = Math.min(3, tokens.length); i >= 1; i -= 1) {
+        const candidate = tokens.slice(0, i).join(' ');
+        if (VEHICLE_BRAND_PREFIXES.has(candidate)) {
+            tokens = tokens.slice(i);
+            break;
+        }
+    }
+
+    if (!tokens.length) return cleaned;
+
+    return tokens.join(' ');
 }
 
 module.exports = { buildStatsEmbeds };
