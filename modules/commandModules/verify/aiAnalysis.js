@@ -27,9 +27,10 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
         // Prepare the prompt
         const prompt = `
 You are validating a vehicle verification photo for AI verification. Respond ONLY with a single JSON object and no extra text.
-Required in the image:
-- Handwritten note (content can be any text; do NOT validate username/server name).
-- Vehicle and keys visible.
+Required in the image (all must be present):
+- Handwritten note that clearly shows the Discord username "${interaction.user.tag}" and the server name "${interaction.guild.name}".
+- The vehicle itself and its keys, clearly visible.
+- Soft check: confirm the keys appear to belong to the same vehicle (placement/brand cues), if possible. If uncertain, mention it in issues.
 
 Return JSON with these keys:
 {

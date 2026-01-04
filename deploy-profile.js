@@ -6,7 +6,7 @@ const discordToken = process.env.TOKEN;
 const clientId = '851411747641884712';
 const profileGuildId = '438650836512669699';
 
-const profileCommand = require('./commands/profile.js');
+const profileCommand = require('./commands/stats.js');
 const rest = new REST({ version: '9' }).setToken(discordToken);
 
 const payload = profileCommand.data.toJSON();

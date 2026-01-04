@@ -6,9 +6,41 @@ const { errorEmbed } = require('../utility.js');
 
 module.exports = async function handleOverrideDeny(interaction) {
     try {
-        if (!interaction.deferred && !interaction.replied) {
-            await interaction.deferUpdate();
+        const modalId = `overrideDenyReason+${interaction.id}`;
+        const reasonInputId = 'overrideDenyReasonInput';
+        await interaction.showModal(
+            new (require('discord.js').ModalBuilder)()
+                .setCustomId(modalId)
+                .setTitle('Override Denial Reason')
+                .addComponents(
+                    new (require('discord.js').ActionRowBuilder)().addComponents(
+                        new (require('discord.js').TextInputBuilder)()
+                            .setCustomId(reasonInputId)
+                            .setLabel('Reason for override')
+                            .setStyle(require('discord.js').TextInputStyle.Paragraph)
+                            .setMinLength(5)
+                            .setMaxLength(500)
+                            .setRequired(true)
+                    )
+                )
+        );
+
+        let modalSubmit;
+        try {
+            modalSubmit = await interaction.awaitModalSubmit({
+                filter: (m) => m.customId === modalId && m.user.id === interaction.user.id,
+                time: 60000,
+            });
+            await modalSubmit.deferUpdate();
+        } catch (err) {
+            await interaction.followUp({
+                embeds: [errorEmbed('No reason provided. Override cancelled.', interaction.user.displayAvatarURL({ dynamic: true }))],
+                ephemeral: true,
+            }).catch(() => {});
+            return;
         }
+
+        const overrideReason = modalSubmit.fields.getTextInputValue(reasonInputId).trim();
         const guildId = interaction.guild.id;
         const initiatorId = interaction.user.id;
         const initiatorTag = interaction.user.tag;
@@ -53,7 +85,10 @@ module.exports = async function handleOverrideDeny(interaction) {
         } else {
             updatedEmbed.addFields({ name: 'Status', value: 'Overridden - Denied' });
         }
-        updatedEmbed.addFields({ name: 'Overridden By', value: `${initiatorTag} | <@${initiatorId}>` });
+        updatedEmbed.addFields(
+            { name: 'Overridden By', value: `${initiatorTag} | <@${initiatorId}>` },
+            { name: 'Override Reason', value: overrideReason || 'None provided' }
+        );
 
         const disabledRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('disabled').setLabel('Overridden').setStyle(ButtonStyle.Secondary).setDisabled(true)
@@ -69,7 +104,24 @@ module.exports = async function handleOverrideDeny(interaction) {
                 .catch(() => {});
         }
 
-        await interaction.followUp({ content: 'Application overridden and denied.', ephemeral: true });
+        // Notify user via DM
+        try {
+            const applicant = await interaction.client.users.fetch(application.userId);
+            const dmEmbed = new EmbedBuilder()
+                .setAuthor({ name: 'Vehicle Verification Processed', iconURL: interaction.guild.iconURL({ dynamic: true }) })
+                .setDescription(`Your verification for **${application.vehicle}** was overridden and denied.`)
+                .addFields({ name: 'Reason', value: overrideReason || 'None provided' })
+                .setColor('#FF6961');
+            if (application.vehicleImageURL) dmEmbed.setThumbnail(application.vehicleImageURL);
+            await applicant.send({ embeds: [dmEmbed] });
+        } catch {
+            await interaction.followUp({
+                embeds: [errorEmbed('Could not notify the user via DM.', interaction.user.displayAvatarURL({ dynamic: true }))],
+                ephemeral: true,
+            });
+        }
+
+        await interaction.followUp({ content: `Application overridden and denied.\nReason: ${overrideReason || 'None provided'}`, ephemeral: true });
     } catch (err) {
         console.error('Error handling override deny:', err);
         const payload = { embeds: [errorEmbed(err.message, interaction.user.displayAvatarURL({ dynamic: true }))], ephemeral: true };

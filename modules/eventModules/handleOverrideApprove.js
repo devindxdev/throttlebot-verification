@@ -12,9 +12,41 @@ const mongoose = require('mongoose');
  */
 module.exports = async function handleOverrideApprove(interaction) {
     try {
-        if (!interaction.deferred && !interaction.replied) {
-            await interaction.deferUpdate();
+        const modalId = `overrideApproveReason+${interaction.id}`;
+        const reasonInputId = 'overrideApproveReasonInput';
+        await interaction.showModal(
+            new (require('discord.js').ModalBuilder)()
+                .setCustomId(modalId)
+                .setTitle('Override Approval Reason')
+                .addComponents(
+                    new (require('discord.js').ActionRowBuilder)().addComponents(
+                        new (require('discord.js').TextInputBuilder)()
+                            .setCustomId(reasonInputId)
+                            .setLabel('Reason for override')
+                            .setStyle(require('discord.js').TextInputStyle.Paragraph)
+                            .setMinLength(5)
+                            .setMaxLength(500)
+                            .setRequired(true)
+                    )
+                )
+        );
+
+        let modalSubmit;
+        try {
+            modalSubmit = await interaction.awaitModalSubmit({
+                filter: (m) => m.customId === modalId && m.user.id === interaction.user.id,
+                time: 60000,
+            });
+            await modalSubmit.deferUpdate();
+        } catch (err) {
+            await interaction.followUp({
+                embeds: [errorEmbed('No reason provided. Override cancelled.', interaction.user.displayAvatarURL({ dynamic: true }))],
+                ephemeral: true,
+            }).catch(() => {});
+            return;
         }
+
+        const overrideReason = modalSubmit.fields.getTextInputValue(reasonInputId).trim();
         const guildId = interaction.guild.id;
         const moderatorId = interaction.user.id;
         const moderatorTag = interaction.user.tag;
@@ -91,7 +123,10 @@ module.exports = async function handleOverrideApprove(interaction) {
         } else {
             updatedEmbed.addFields({ name: 'Status', value: 'Overridden - Approved' });
         }
-        updatedEmbed.addFields({ name: 'Decided By', value: `${moderatorTag} | <@${moderatorId}>` });
+        updatedEmbed.addFields(
+            { name: 'Decided By', value: `${moderatorTag} | <@${moderatorId}>` },
+            { name: 'Override Reason', value: overrideReason || 'None provided' }
+        );
         updatedEmbed.setFooter({ text: footerText, iconURL: footerIcon });
 
         const disabledRow = new ActionRowBuilder().addComponents(
@@ -136,7 +171,8 @@ module.exports = async function handleOverrideApprove(interaction) {
                         '• View your verified vehicles with `/garage`.\n' +
                         '• Customize images and descriptions with `/settings`.\n' +
                         '• Verify another vehicle anytime with `/verify`.',
-                })
+                },
+                { name: 'Override Reason', value: overrideReason || 'None provided' })
                 .setColor(greenColor)
                 .setFooter({ text: footerText, iconURL: footerIcon });
             if (vehicleImageURL) dmEmbed.setThumbnail(vehicleImageURL);
@@ -149,7 +185,7 @@ module.exports = async function handleOverrideApprove(interaction) {
         }
 
         await interaction.followUp({
-            content: `Override approved for **${vehicle}**.`,
+            content: `Override approved for **${vehicle}**.\nReason: ${overrideReason || 'None provided'}`,
             ephemeral: true,
         });
     } catch (err) {
