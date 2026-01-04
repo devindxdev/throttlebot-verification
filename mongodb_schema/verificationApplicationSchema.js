@@ -23,6 +23,7 @@ const verificationApplication = new mongoose.Schema(
     decision: { type: String, default: null },
     decidedBy: { type: String, default: null },
     decidedOn: { type: Date, default: null },
+    aiAnalysis: { type: mongoose.Schema.Types.Mixed, default: null },
   },
   {
     timestamps: true,

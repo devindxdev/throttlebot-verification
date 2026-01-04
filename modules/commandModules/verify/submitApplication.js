@@ -34,6 +34,7 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
 
     // Will be populated if AI analysis runs
     let analysisSummary = null;
+    let aiAnalysisData = null;
 
     const initiator = interaction.user;
     const { id: initiatorId, tag: initiatorTag } = initiator;
@@ -48,6 +49,7 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
                 const { confidence = 0, requirementsMet, vehicleMatch, estimatedValueUSD } = analysisResult.analysis || {};
                 const parsedValue = Number(estimatedValueUSD);
                 const estimatedValue = Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : null;
+                aiAnalysisData = analysisResult.analysis || null;
 
                 // High-value rules
                 if (estimatedValue !== null && estimatedValue >= 100000) {
@@ -74,6 +76,7 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
                         loggingChannel,
                         verificationChannel,
                         initiator,
+                        analysis: analysisResult.analysis || null,
                     });
                     return;
                 }
@@ -172,6 +175,7 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
             status: 'open',
             submittedOn: new Date().toISOString(),
             applicationMessageId: applicationMessage.id,
+            aiAnalysis: aiAnalysisData,
         });
 
         try {
@@ -224,7 +228,7 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
         });
     };
 
-async function autoApproveApplication({ interaction, guildProfile, vehicleName, vehicleAttachment, loggingChannel, verificationChannel, initiator }) {
+async function autoApproveApplication({ interaction, guildProfile, vehicleName, vehicleAttachment, loggingChannel, verificationChannel, initiator, analysis }) {
     const { id: initiatorId, tag: initiatorTag } = initiator;
     const guildId = interaction.guild.id;
 
@@ -295,6 +299,7 @@ async function autoApproveApplication({ interaction, guildProfile, vehicleName, 
         decision: 'approved',
         decidedBy: 'ai-auto',
         decidedOn: new Date().toISOString(),
+        aiAnalysis: analysis || null,
     });
     await application.save();
 
@@ -371,6 +376,7 @@ async function autoDenyApplication({ interaction, guildProfile, vehicleName, veh
         decision: 'denied',
         decidedBy: 'ai-auto',
         decidedOn: new Date().toISOString(),
+        aiAnalysis: analysis || null,
     });
     await application.save();
 
