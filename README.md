@@ -1,13 +1,13 @@
 
 # 🤖 ThrottleBot - Vehicle Verification Bot
 
-[![License](https://img.shields.io/github/license/davidxdeveloper/throttlebot-verification?style=flat-square)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/davidxdeveloper/throttlebot-verification?style=flat-square)](https://github.com/davidxdeveloper/throttlebot-verification/stargazers)
-[![Forks](https://img.shields.io/github/forks/davidxdeveloper/throttlebot-verification?style=flat-square)](https://github.com/davidxdeveloper/throttlebot-verification/network/members)
-[![Issues](https://img.shields.io/github/issues/davidxdeveloper/throttlebot-verification?style=flat-square)](https://github.com/davidxdeveloper/throttlebot-verification/issues)
-[![Last Commit](https://img.shields.io/github/last-commit/davidxdeveloper/throttlebot-verification?style=flat-square)](https://github.com/davidxdeveloper/throttlebot-verification/commits/main)
+[![License](https://img.shields.io/github/license/devindxdev/throttlebot-verification?style=flat-square)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/devindxdev/throttlebot-verification?style=flat-square)](https://github.com/devindxdev/throttlebot-verification/stargazers)
+[![Forks](https://img.shields.io/github/forks/devindxdev/throttlebot-verification?style=flat-square)](https://github.com/devindxdev/throttlebot-verification/network/members)
+[![Issues](https://img.shields.io/github/issues/devindxdev/throttlebot-verification?style=flat-square)](https://github.com/devindxdev/throttlebot-verification/issues)
+[![Last Commit](https://img.shields.io/github/last-commit/devindxdev/throttlebot-verification?style=flat-square)](https://github.com/devindxdev/throttlebot-verification/commits/main)
 [![Discord](https://img.shields.io/discord/851413403222147073?label=Discord&style=flat-square)](https://discord.gg/Nh4A6HDZT4)
-[![Live Stats](https://img.shields.io/endpoint?style=flat-square&url=https%3A%2F%2Fthrottlebot-verify.herokuapp.com%2Fstatus)](#live-status-endpoint)
+[![Live Stats](https://img.shields.io/endpoint?style=flat-square&url=https%3A%2F%2Fthrottlebot-verify.herokuapp.com%2Fstatus%3Fbadge%3D1)](#live-status-endpoint)
 
 We're simplifying the process of verifying your vehicles across Discord by featuring a seamless and feature full experience.
 
@@ -72,4 +72,3 @@ Environment options:
 - `/search` Search server-wide for a specific vehicle
 - `/settings` Add your vehicle's images, set description and more personalisation options
 - `/manage` Manage verified rides, edit, delete them etc.
-
