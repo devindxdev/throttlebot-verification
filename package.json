@@ -32,6 +32,7 @@
     "discord.js": "^14.17.2",
     "dotenv": "^16.0.1",
     "escape-string-regexp": "^5.0.0",
+    "express": "^5.2.1",
     "moment": "^2.29.4",
     "mongoose": "^6.4.6",
     "node-fetch": "^3.3.2",
