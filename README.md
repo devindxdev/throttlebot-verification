@@ -1,6 +1,14 @@
 
 # 🤖 ThrottleBot - Vehicle Verification Bot
 
+[![License](https://img.shields.io/github/license/devindxdev/throttlebot-verification?style=flat-square)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/devindxdev/throttlebot-verification?style=flat-square)](https://github.com/devindxdev/throttlebot-verification/stargazers)
+[![Forks](https://img.shields.io/github/forks/devindxdev/throttlebot-verification?style=flat-square)](https://github.com/devindxdev/throttlebot-verification/network/members)
+[![Issues](https://img.shields.io/github/issues/devindxdev/throttlebot-verification?style=flat-square)](https://github.com/devindxdev/throttlebot-verification/issues)
+[![Last Commit](https://img.shields.io/github/last-commit/devindxdev/throttlebot-verification?style=flat-square)](https://github.com/devindxdev/throttlebot-verification/commits/main)
+[![Discord](https://img.shields.io/discord/851413403222147073?label=Discord&style=flat-square)](https://discord.gg/Nh4A6HDZT4)
+[![Live Stats](https://img.shields.io/endpoint?style=flat-square&url=https%3A%2F%2Fthrottlebot-verify.herokuapp.com%2Fstatus%3Fbadge%3D1)](#live-status-endpoint)
+
 We're simplifying the process of verifying your vehicles across Discord by featuring a seamless and feature full experience.
 
 The bot utilizes Discord's latest API version V9 to provide you with the latest features that are available.
