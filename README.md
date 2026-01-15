@@ -1,6 +1,14 @@
 
 # 🤖 ThrottleBot - Vehicle Verification Bot
 
+[![License](https://img.shields.io/github/license/davidxdeveloper/throttlebot-verification?style=flat-square)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/davidxdeveloper/throttlebot-verification?style=flat-square)](https://github.com/davidxdeveloper/throttlebot-verification/stargazers)
+[![Forks](https://img.shields.io/github/forks/davidxdeveloper/throttlebot-verification?style=flat-square)](https://github.com/davidxdeveloper/throttlebot-verification/network/members)
+[![Issues](https://img.shields.io/github/issues/davidxdeveloper/throttlebot-verification?style=flat-square)](https://github.com/davidxdeveloper/throttlebot-verification/issues)
+[![Last Commit](https://img.shields.io/github/last-commit/davidxdeveloper/throttlebot-verification?style=flat-square)](https://github.com/davidxdeveloper/throttlebot-verification/commits/main)
+[![Discord](https://img.shields.io/discord/851413403222147073?label=Discord&style=flat-square)](https://discord.gg/Nh4A6HDZT4)
+[![Live Stats](https://img.shields.io/endpoint?style=flat-square&url=https%3A%2F%2Fthrottlebot-verify.herokuapp.com%2Fstatus)](#live-status-endpoint)
+
 We're simplifying the process of verifying your vehicles across Discord by featuring a seamless and feature full experience.
 
 The bot utilizes Discord's latest API version V9 to provide you with the latest features that are available.
@@ -27,6 +35,33 @@ Featured in the [AR12Gaming](https://discord.gg/ar12) server and the biggest aut
 
 > :exclamation:  **Please make sure that the bot has access to view and send messages in the channel you use the slash commands if it appears to be unresponsive.**
 
+## Live Status Endpoint
+The bot exposes a simple JSON endpoint you can use for live badges or site stats.
+
+- Default URL: `http://<host>:3000/status`
+- Optional health check: `http://<host>:3000/health`
+
+Example response:
+```json
+{
+  "status": "ok",
+  "updatedAt": "2025-01-05T02:15:30.000Z",
+  "guilds": 123,
+  "users": 456789,
+  "verifiedVehicles": 12034,
+  "totalVerifications": 34210
+}
+```
+
+If you want the README badge to be live, update the badge URL to your public status endpoint:
+```
+https://img.shields.io/endpoint?style=flat-square&url=https%3A%2F%2Fyour-domain.com%2Fstatus
+```
+
+Environment options:
+- `STATUS_PORT` (default `3000`)
+- `STATUS_PATH` (default `/status`)
+
 ## Commands
 - `/ping` Replies with pong
 - `/about` Information regarding the bot
@@ -37,6 +72,4 @@ Featured in the [AR12Gaming](https://discord.gg/ar12) server and the biggest aut
 - `/search` Search server-wide for a specific vehicle
 - `/settings` Add your vehicle's images, set description and more personalisation options
 - `/manage` Manage verified rides, edit, delete them etc.
-
-
 
