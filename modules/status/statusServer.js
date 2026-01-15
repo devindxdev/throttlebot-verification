@@ -41,7 +41,7 @@ function startStatusServer(client) {
         const payload = await buildStatusPayload(client);
         if (req.query.badge === '1') {
             const message = payload.status === 'ok'
-                ? `${payload.guilds} servers • ${payload.users} users`
+                ? `${payload.guilds} servers • ${payload.users} users • ${payload.verifiedVehicles} verified • ${payload.totalVerifications} applications`
                 : 'starting';
             return res.json({
                 schemaVersion: 1,
