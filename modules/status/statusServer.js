@@ -37,8 +37,19 @@ async function buildStatusPayload(client) {
 function startStatusServer(client) {
     const app = express();
 
-    app.get(STATUS_PATH, async (_req, res) => {
+    app.get(STATUS_PATH, async (req, res) => {
         const payload = await buildStatusPayload(client);
+        if (req.query.badge === '1') {
+            const message = payload.status === 'ok'
+                ? `${payload.guilds} servers • ${payload.users} users`
+                : 'starting';
+            return res.json({
+                schemaVersion: 1,
+                label: 'bot stats',
+                message,
+                color: payload.status === 'ok' ? 'red' : 'lightgrey',
+            });
+        }
         res.json(payload);
     });
 
