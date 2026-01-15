@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const fs = require('node:fs');
 const path = require('node:path');
 require('dotenv').config();
+const { startStatusServer } = require('./modules/status/statusServer.js');
 
 const discordToken = process.env.TOKEN;
 
@@ -66,3 +67,6 @@ process.on('uncaughtException', (error) => {
 
 // Login to Discord
 client.login(discordToken);
+
+// Start public status endpoint for live badges
+startStatusServer(client);
