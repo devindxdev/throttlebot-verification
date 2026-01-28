@@ -205,23 +205,23 @@ module.exports = async function specsFlow(triggerInteraction, ctx) {
     const buildControls = (hasSpecs, aiBusy = false) => [
         new ActionRowBuilder().addComponents(
             new ButtonBuilder()
-                .setCustomId(`settingsSpecsManual+${mainInteractionId}`)
-                .setLabel('Enter Specs')
-                .setStyle(ButtonStyle.Primary),
-            new ButtonBuilder()
                 .setCustomId(`settingsSpecsAi+${mainInteractionId}`)
                 .setLabel(aiBusy ? 'Generating...' : 'Generate with AI')
-                .setStyle(ButtonStyle.Secondary)
+                .setStyle(ButtonStyle.Primary)
                 .setDisabled(aiBusy),
             new ButtonBuilder()
+                .setCustomId(`settingsSpecsManual+${mainInteractionId}`)
+                .setLabel('Enter Specs Manually')
+                .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
                 .setCustomId(`settingsSpecsOptional+${mainInteractionId}`)
-                .setLabel('Optional Fields')
+                .setLabel('Optional Specs')
                 .setStyle(ButtonStyle.Secondary),
             ...(hasSpecs
                 ? [
                       new ButtonBuilder()
                           .setCustomId(`settingsSpecsEdit+${mainInteractionId}`)
-                          .setLabel('Edit Fields')
+                          .setLabel('Edit Specs')
                           .setStyle(ButtonStyle.Secondary),
                   ]
                 : [])
