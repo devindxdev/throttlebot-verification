@@ -63,19 +63,12 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
                         : isPassportVehicle
                         ? { id: '1326753919321243719', name: 'TCC' }
                         : undefined;
-                const displayEmoji =
-                    collectionBadges.length > 0
-                        ? collectionBadges[0]
-                        : isPassportVehicle
-                        ? '<:TCC:1326753919321243719>'
-                        : '';
 
                 return {
                     label,
                     description: descriptionText,
                     value: `${absoluteIndex}`,
                     emoji: optionEmoji,
-                    displayEmoji,
                 };
             });
         };
@@ -98,10 +91,7 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
                 const vehicleList = buildVehicleList();
                 const startIndex = (page - 1) * pageSize;
                 const listText = vehicleList
-                    .map(
-                        (vehicle, index) =>
-                            `\`${startIndex + index + 1}.\` ${vehicle.displayEmoji ? `${vehicle.displayEmoji} ` : ''}${vehicle.label}`
-                    )
+                    .map((vehicle, index) => `\`${startIndex + index + 1}.\` ${vehicle.label}`)
                     .join('\n');
 
                 embed.setDescription(
@@ -188,7 +178,7 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
             // Step 3: Set up a collector for dropdown menu interactions (scoped to this message)
             const collector = garageMessage.createMessageComponentCollector({
                 componentType: ComponentType.StringSelect,
-                time: 60000, // Collector active for 60 seconds
+                time: 600000, // 10 minutes
                 filter: (i) =>
                     i.user.id === interaction.user.id &&
                     i.customId === 'garage_menu' &&
@@ -197,7 +187,7 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
 
             const navCollector = garageMessage.createMessageComponentCollector({
                 componentType: ComponentType.Button,
-                time: 60000,
+                time: 600000,
                 filter: (i) =>
                     i.user.id === interaction.user.id &&
                     (i.customId === `garagePrev+${interaction.id}` || i.customId === `garageNext+${interaction.id}`) &&
@@ -246,7 +236,7 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
 
                     collector.stop('selected');
                     navCollector.stop('selected');
-                    await require('./garageMenuHandler')(interaction, selectedOption, garageData, user, guildProfile, garageMessage);
+                    await require('./garageMenuHandler')(interaction, selectedOption, data, user, guildProfile, garageMessage);
                     
                 } catch (error) {
                     console.error('Error handling garage menu selection:', error);
@@ -266,7 +256,14 @@ module.exports = async (interaction, garageData, user, guildProfile) => {
                 if (btnInteraction.customId === `garageNext+${interaction.id}` && page < pageCount) {
                     page += 1;
                 }
-                const updatedRows = pageCount > 1 ? [buildMenuRow(), buildNavRow(), buildFilterRow()] : [buildMenuRow(), buildFilterRow()];
+                const filterRow = buildFilterRow();
+                const updatedRows = filterRow
+                    ? pageCount > 1
+                        ? [buildMenuRow(), buildNavRow(), filterRow]
+                        : [buildMenuRow(), filterRow]
+                    : pageCount > 1
+                    ? [buildMenuRow(), buildNavRow()]
+                    : [buildMenuRow()];
                 await garageMessage.edit({
                     embeds: [buildEmbed()],
                     components: updatedRows,
