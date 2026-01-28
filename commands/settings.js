@@ -4,7 +4,7 @@ const settingsController = require('../modules/commandModules/settings/controlle
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('settings')
-        .setDescription('Configure your garage images, descriptions, icons, and embed colors.'),
+        .setDescription('Configure your garage images, specs, collections, icons, and embed colors.'),
     async execute(interaction) {
         await settingsController(interaction);
     },

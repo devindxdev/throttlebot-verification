@@ -5,14 +5,16 @@ const {
     ComponentType,
 } = require('discord.js');
 const imagesFlow = require('./flows/images.js');
-const descriptionFlow = require('./flows/description.js');
+const specsFlow = require('./flows/specs.js');
 const garageIconFlow = require('./flows/garageIcon.js');
 const embedColorFlow = require('./flows/embedColor.js');
 const sortingFlow = require('./flows/sorting.js');
+const collectionsFlow = require('./flows/collections.js');
 
 const MENU_OPTIONS = [
     { label: 'Images', description: 'View or remove vehicle images.', value: 'images' },
-    { label: 'Description', description: 'Set or reset vehicle description.', value: 'description' },
+    { label: 'Vehicle Specs', description: 'Set or reset your vehicle specs.', value: 'specs' },
+    { label: 'Collections', description: 'Organize your vehicles into collections.', value: 'collections' },
     { label: 'Garage Icon', description: 'Set or reset your garage icon.', value: 'garageIcon' },
     { label: 'Embed Color', description: 'Customize your embed color.', value: 'embedColor' },
     { label: 'Sorting', description: 'Choose how your garage is sorted.', value: 'sorting' },
@@ -83,8 +85,20 @@ async function presentSettingsDashboard(context) {
                     logChannel,
                 });
                 break;
-            case 'description':
-                await descriptionFlow(selectInteraction, {
+            case 'specs':
+                await specsFlow(selectInteraction, {
+                    interaction,
+                    initiator,
+                    guild,
+                    embedColor,
+                    footer,
+                    garageData,
+                    selectedVehicle,
+                    logChannel,
+                });
+                break;
+            case 'collections':
+                await collectionsFlow(selectInteraction, {
                     interaction,
                     initiator,
                     guild,

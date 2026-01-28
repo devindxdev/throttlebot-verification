@@ -26,6 +26,22 @@ async function clearVehicleDescription({ guildId, userId, vehicleName }) {
     );
 }
 
+/** Updates vehicle specs for a vehicle. */
+async function updateVehicleSpecs({ guildId, userId, vehicleName, specs }) {
+    return garageSchema.updateOne(
+        { guildId, userId, vehicle: vehicleName },
+        { $set: { vehicleSpecs: specs } }
+    );
+}
+
+/** Clears vehicle specs. */
+async function clearVehicleSpecs({ guildId, userId, vehicleName }) {
+    return garageSchema.updateOne(
+        { guildId, userId, vehicle: vehicleName },
+        { $set: { vehicleSpecs: null } }
+    );
+}
+
 /** Persists the provided image list. */
 async function saveVehicleImages({ guildId, userId, vehicleName, images }) {
     return garageSchema.updateOne(
@@ -34,9 +50,20 @@ async function saveVehicleImages({ guildId, userId, vehicleName, images }) {
     );
 }
 
+/** Sets collections array for a vehicle. */
+async function setVehicleCollections({ guildId, userId, vehicleName, collections }) {
+    return garageSchema.updateOne(
+        { guildId, userId, vehicle: vehicleName },
+        { $set: { collections } }
+    );
+}
+
 module.exports = {
     updateVehicleName,
     updateVehicleDescription,
     clearVehicleDescription,
+    updateVehicleSpecs,
+    clearVehicleSpecs,
     saveVehicleImages,
+    setVehicleCollections,
 };

@@ -6,6 +6,7 @@ const {
     ButtonStyle,
     ComponentType,
 } = require('discord.js');
+const { findProfile } = require('../manage/services/profileService.js');
 
 /**
  * Presents a dropdown with the caller's verified vehicles and resolves with the selected entry.
@@ -29,6 +30,28 @@ async function vehicleSelection(
         return null;
     }
 
+    let sortPreference = 'default';
+    try {
+        const profile = await findProfile(userData?.id);
+        sortPreference = profile?.sortPreference || 'default';
+    } catch (err) {
+        console.error('Failed to load sort preference for vehicle selection:', err);
+    }
+
+    const sortedGarage = [...garageData];
+    if (sortPreference === 'year-asc' || sortPreference === 'year-desc') {
+        sortedGarage.sort((a, b) => {
+            const yearA = parseInt(a?.vehicleSpecs?.year, 10);
+            const yearB = parseInt(b?.vehicleSpecs?.year, 10);
+            const validA = !isNaN(yearA);
+            const validB = !isNaN(yearB);
+            if (!validA && !validB) return 0;
+            if (!validA) return 1; // missing years go last
+            if (!validB) return -1;
+            return sortPreference === 'year-asc' ? yearA - yearB : yearB - yearA;
+        });
+    }
+
     const selectionId = `vehicle_select_${interaction.id}`;
     const prevId = `vehicle_select_prev_${interaction.id}`;
     const nextId = `vehicle_select_next_${interaction.id}`;
@@ -38,10 +61,22 @@ async function vehicleSelection(
     let page = 1;
     const totalPages = Math.ceil(garageData.length / pageSize);
 
+    const collectionEmojiMap = {
+        track: { id: '1465988323293134870', name: 'yellow' },
+        project: { id: '976067465471721532', name: 'blurpleIndicator' },
+        daily: { id: '1465988391404310773', name: 'green' },
+        sold: { id: '1465988285959639207', name: 'red' },
+    };
+    const emojiDisplay = (key) => {
+        const e = collectionEmojiMap[key];
+        return e ? `<:${e.name}:${e.id}>` : '';
+    };
+
     const buildPageData = () => {
         const startIndex = (page - 1) * pageSize;
         const endIndex = startIndex + pageSize;
-        return garageData.slice(startIndex, endIndex).map((vehicle, index) => {
+        return sortedGarage.slice(startIndex, endIndex).map((vehicle, index) => {
+            const badges = (vehicle.collections || []).map((c) => emojiDisplay(c)).filter(Boolean);
             const label = vehicle?.vehicle
                 ? vehicle.vehicle.slice(0, 100)
                 : `Vehicle ${startIndex + index + 1}`;
@@ -54,6 +89,9 @@ async function vehicleSelection(
                 label,
                 description,
                 value: String(startIndex + index),
+                emoji: badges.length
+                    ? { id: collectionEmojiMap[vehicle.collections[0]]?.id, name: collectionEmojiMap[vehicle.collections[0]]?.name }
+                    : undefined,
             };
         });
     };
@@ -133,11 +171,11 @@ async function vehicleSelection(
                     console.error('Failed to acknowledge vehicle selection:', err);
                 }
 
-            const selectedIndex = parseInt(menuInteraction.values[0], 10);
-            collector.stop('selected');
-            navCollector.stop('selected');
-            resolve(garageData[selectedIndex]);
-        });
+                const selectedIndex = parseInt(menuInteraction.values[0], 10);
+                collector.stop('selected');
+                navCollector.stop('selected');
+                resolve(sortedGarage[selectedIndex]);
+            });
 
             navCollector.on('collect', async (btnInteraction) => {
                 await btnInteraction.deferUpdate();

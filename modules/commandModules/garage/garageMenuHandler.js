@@ -16,17 +16,36 @@ module.exports = async (interaction, selectedOption, userGarage, guildProfile, p
 
         // Fetch the selected vehicle
         const selectedVehicle = userGarage[selectedIndex];
-        const { vehicle, vehicleImages, vehicleDescription, guildId } = selectedVehicle;
+        const { vehicle, vehicleImages, vehicleDescription, vehicleSpecs, guildId, collections = [] } = selectedVehicle;
 
         // Check if the vehicle is from the Passport Server
         const isPassportVehicle = guildProfile.passportEnabled && guildId === guildProfile.passportGuildId;
         const footerIconUrl = guildProfile.footerIcon || interaction.client.user.displayAvatarURL();
         const guildDisplayName = interaction.guild?.name || guildProfile.guildName || 'Vehicle Verification';
 
+        // Build collection display
+        const collectionEmojis = {
+            track: '<:yellow:1465988323293134870>',
+            project: '<:blurpleIndicator:976067465471721532>',
+            daily: '<:green:1465988391404310773>',
+            sold: '<:red:1465988285959639207>',
+        };
+        const collectionLabels = {
+            track: 'Track',
+            project: 'Project',
+            daily: 'Daily',
+            sold: 'Sold',
+        };
+        const collectionSuffix =
+            collections && collections.length
+                ? ` - ${collections.map((c) => collectionLabels[c] || c).join(' / ')}`
+                : '';
+
         // Build the vehicle embed
+        const soldSuffix = ''; // suffix handled by collectionSuffix
         const vehicleEmbed = new EmbedBuilder()
             .setAuthor({
-                name: `${vehicle} - ${isPassportVehicle ? 'Global Passport Vehicle' : 'Verified Vehicle'}`,
+                name: `${vehicle}${collectionSuffix}${soldSuffix}${isPassportVehicle ? ' - Global Passport Vehicle' : ''}`,
                 iconURL: interaction.user.displayAvatarURL({ dynamic: true }),
             })
             .setColor(guildProfile.embedColor || '#0099ff')
@@ -35,12 +54,29 @@ module.exports = async (interaction, selectedOption, userGarage, guildProfile, p
                 iconURL: guildProfile.footerIcon || interaction.client.user.displayAvatarURL(),
             });
 
-        // Add description, if available
-        if (vehicleDescription) {
+        // Add specs + notes
+        const specs = vehicleSpecs || null;
+        if (specs) {
+            const specFields = [];
+            if (specs.engine) specFields.push({ name: 'Engine', value: specs.engine, inline: false });
+            if (specs.horsepower) specFields.push({ name: 'Horsepower', value: specs.horsepower, inline: true });
+            if (specs.torque) specFields.push({ name: 'Torque', value: specs.torque, inline: true });
+            if (specs.drivetrain) specFields.push({ name: 'Drivetrain', value: specs.drivetrain, inline: true });
+            if (specs.transmission) specFields.push({ name: 'Transmission', value: specs.transmission, inline: true });
+            if (specs.acceleration) specFields.push({ name: 'Acceleration', value: specs.acceleration, inline: true });
+            if (specs.year) specFields.push({ name: 'Year', value: specs.year, inline: true });
+            if (specs.color) specFields.push({ name: 'Color', value: specs.color, inline: true });
+            if (specs.powertrain) specFields.push({ name: 'Powertrain', value: specs.powertrain, inline: false });
+            if (specs.mods) specFields.push({ name: 'Mods', value: specs.mods, inline: false });
+
+            vehicleEmbed.addFields(specFields.length ? specFields : [{ name: 'Vehicle Specs', value: 'No specs set.' }]);
+        } else if (vehicleDescription) {
             vehicleEmbed.setDescription(vehicleDescription);
         }
 
         // Handle images
+        const componentRows = [];
+
         if (vehicleImages && vehicleImages.length > 0) {
             let currentPage = 0;
             vehicleEmbed
@@ -67,7 +103,7 @@ module.exports = async (interaction, selectedOption, userGarage, guildProfile, p
             // Send the initial embed with buttons
             const replyMessage = await interaction.editReply({
                 embeds: [vehicleEmbed],
-                components: vehicleImages.length > 1 ? [row] : [],
+                components: vehicleImages.length > 1 ? [...componentRows, row] : componentRows,
             });
 
             // Only create collector if there are multiple images
@@ -102,7 +138,7 @@ module.exports = async (interaction, selectedOption, userGarage, guildProfile, p
                         // Update the message
                         await buttonInteraction.update({
                             embeds: [vehicleEmbed],
-                            components: [row],
+                            components: [...componentRows, row],
                         });
                     } catch (err) {
                         console.error('Error updating garage navigation:', err);
@@ -122,7 +158,7 @@ module.exports = async (interaction, selectedOption, userGarage, guildProfile, p
                         row.components.forEach((button) => button.setDisabled(true));
                         await interaction.editReply({
                             embeds: [vehicleEmbed],
-                            components: [row],
+                            components: [...componentRows, row],
                         }).catch(console.error);
                     } catch (err) {
                         console.error('Error disabling buttons on collector end:', err);
@@ -131,10 +167,15 @@ module.exports = async (interaction, selectedOption, userGarage, guildProfile, p
             }
         } else {
             // If no images are available
-            vehicleEmbed.setDescription(vehicleDescription || 'No images available for this vehicle.');
+            if (!vehicleSpecs && vehicleDescription) {
+                vehicleEmbed.setDescription(vehicleDescription);
+            }
+            if (!vehicleEmbed.data.description) {
+                vehicleEmbed.setDescription('No images available for this vehicle.');
+            }
             await interaction.editReply({
                 embeds: [vehicleEmbed],
-                components: [],
+                components: componentRows,
             });
         }
     } catch (error) {
