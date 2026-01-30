@@ -71,8 +71,8 @@ function startStatusServer(client) {
         res.json({ status: 'ok' });
     });
 
-    // Fallback to SPA index (Express 5 requires a parameter name)
-    app.get('/*', (req, res, next) => {
+    // Fallback to SPA index (Express 5 wildcard via regex)
+    app.get(/.*/, (req, res, next) => {
         if (req.path.startsWith(STATUS_PATH) || req.path.startsWith('/health')) return next();
         res.sendFile(path.join(siteDir, 'index.html'));
     });
