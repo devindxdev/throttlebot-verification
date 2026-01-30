@@ -37,6 +37,20 @@ async function buildStatusPayload(client) {
 function startStatusServer(client) {
     const app = express();
 
+    // Simple CORS for public telemetry use (website/README badges)
+    app.use((req, res, next) => {
+        res.header('Access-Control-Allow-Origin', '*');
+        res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Content-Type');
+        if (req.method === 'OPTIONS') return res.sendStatus(204);
+        next();
+    });
+
+    // Serve built site
+    const path = require('path');
+    const siteDir = path.join(__dirname, '..', '..', 'throttlebot-site', 'dist');
+    app.use(express.static(siteDir));
+
     app.get(STATUS_PATH, async (req, res) => {
         const payload = await buildStatusPayload(client);
         if (req.query.badge === '1') {
@@ -55,6 +69,12 @@ function startStatusServer(client) {
 
     app.get('/health', (_req, res) => {
         res.json({ status: 'ok' });
+    });
+
+    // Fallback to SPA index
+    app.get('*', (req, res, next) => {
+        if (req.path.startsWith(STATUS_PATH) || req.path.startsWith('/health')) return next();
+        res.sendFile(path.join(siteDir, 'index.html'));
     });
 
     app.listen(STATUS_PORT, () => {
