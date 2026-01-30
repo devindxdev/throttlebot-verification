@@ -717,6 +717,11 @@ const LandingPage = () => {
                         <a href="https://github.com/devindxdev/throttlebot-verification" target="_blank" rel="noopener noreferrer" className="text-neutral-500 hover:text-white transition-colors">
                             <Github className="w-5 h-5" />
                         </a>
+                        <a href="https://discord.gg/Nh4A6HDZT4" target="_blank" rel="noopener noreferrer" className="text-neutral-500 hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 127.14 96.36" className="w-5 h-5 fill-current">
+                                <path d="M107.7 8.07A105.15 105.15 0 0 0 81.08 0a72.06 72.06 0 0 0-3.36 6.91 97.68 97.68 0 0 0-29 0A72.37 72.37 0 0 0 45.36 0 105.89 105.89 0 0 0 18.64 8.09C2.66 32.65-1.6 56.6.54 80.21A105.73 105.73 0 0 0 32.3 96.36 77.7 77.7 0 0 0 39.6 86.7a68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 55.16 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 7.31 9.64A105.25 105.25 0 0 0 126.6 80.23c2.5-26.13-4.25-49.91-18.9-72.16ZM42.5 65.69c-5.48 0-9.93-5-9.93-11.14S37 43.4 42.5 43.4s9.98 5 9.93 11.15S48 65.69 42.5 65.69Zm42.14 0c-5.48 0-9.93-5-9.93-11.14S79.16 43.4 84.64 43.4s10 5 9.94 11.15-4.45 11.14-9.94 11.14Z" />
+                            </svg>
+                        </a>
                     </div>
                 </div>
                 
