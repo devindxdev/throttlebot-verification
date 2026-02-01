@@ -34,6 +34,7 @@ async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
         turnaround,
         brandApproval,
         topBrands,
+        leastBrands,
         topVehicles,
         topUsers,
     ] = await Promise.all([
@@ -43,6 +44,7 @@ async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
         averageTurnaround(matchScope),
         brandApprovalRates(matchScope),
         mostCommonBrands(matchScope),
+        leastCommonBrands(matchScope),
         mostPopularVehicles(matchScope),
         topUsersByVehicles(matchScope, client),
     ]);
@@ -116,6 +118,21 @@ async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
             title: `Top Brands (${scopeText})`,
             description: 'Most common brands by count.',
             chartConfig: barChart(topBrands.labels, topBrands.counts, COLORS.primary, {
+                xLabel: 'Num of vehicles',
+                yLabel: 'Brand',
+                datasetLabel: 'Vehicles',
+                orientation: 'horizontal',
+                enableDatalabels: true,
+                datalabelsColor: COLORS.black,
+                datalabelsBackground: COLORS.white,
+            }),
+        }),
+        createEntry({
+            key: 'brands_low',
+            label: 'Least Brands',
+            title: `Least Common Brands (${scopeText})`,
+            description: 'Least common brands by count.',
+            chartConfig: barChart(leastBrands.labels, leastBrands.counts, COLORS.secondary, {
                 xLabel: 'Num of vehicles',
                 yLabel: 'Brand',
                 datasetLabel: 'Vehicles',
@@ -451,6 +468,35 @@ async function mostCommonBrands(matchScope) {
 
     const sorted = Array.from(brandCounts.values())
         .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+    return {
+        labels: sorted.map((b) => formatLabel(b.label)),
+        counts: sorted.map((b) => b.count),
+    };
+}
+
+async function leastCommonBrands(matchScope) {
+    const vehicles = await garageSchema.find(matchScope).select('vehicle vehicleBrand vehicleModel').lean();
+    const brandCounts = new Map();
+
+    for (const vehicle of vehicles) {
+        const meta = resolveBrandFields({
+            vehicleName: vehicle.vehicle,
+            vehicleBrand: vehicle.vehicleBrand,
+            vehicleModel: vehicle.vehicleModel,
+        });
+        if (!meta.brandKey) continue;
+
+        const bucket = brandCounts.get(meta.brandKey) || { label: meta.brand || 'Unknown', count: 0 };
+        if (!bucket.label && meta.brand) bucket.label = meta.brand;
+        bucket.count += 1;
+        brandCounts.set(meta.brandKey, bucket);
+    }
+
+    const sorted = Array.from(brandCounts.values())
+        .filter((b) => b.count > 0)
+        .sort((a, b) => a.count - b.count || a.label.localeCompare(b.label))
         .slice(0, 10);
 
     return {

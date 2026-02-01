@@ -304,6 +304,15 @@ module.exports = async function specsFlow(triggerInteraction, ctx) {
                             .setRequired(false)
                             .setMaxLength(40)
                             .setValue(specs.transmission || '')
+                    ),
+                    new ActionRowBuilder().addComponents(
+                        new TextInputBuilder()
+                            .setCustomId('spec_powertrain')
+                            .setLabel('Powertrain (optional)')
+                            .setStyle(TextInputStyle.Short)
+                            .setRequired(false)
+                            .setMaxLength(120)
+                            .setValue(specs.powertrain || '')
                     )
                 );
 
@@ -328,6 +337,7 @@ module.exports = async function specsFlow(triggerInteraction, ctx) {
                 torque: toSpecString(getField(submission, 'spec_torque') || null),
                 drivetrain: toSpecString(getField(submission, 'spec_drivetrain') || null),
                 transmission: toSpecString(getField(submission, 'spec_transmission') || null),
+                powertrain: toSpecString(getField(submission, 'spec_powertrain') || null),
             };
             const merged = finalizeSpecs(mergeSpecs(selectedVehicle.vehicleSpecs, updates));
 
@@ -420,6 +430,15 @@ module.exports = async function specsFlow(triggerInteraction, ctx) {
                             .setRequired(false)
                             .setMaxLength(40)
                             .setValue(specs.transmission || '')
+                    ),
+                    new ActionRowBuilder().addComponents(
+                        new TextInputBuilder()
+                            .setCustomId('spec_powertrain')
+                            .setLabel('Powertrain')
+                            .setStyle(TextInputStyle.Short)
+                            .setRequired(false)
+                            .setMaxLength(120)
+                            .setValue(specs.powertrain || '')
                     )
                 );
 
@@ -444,6 +463,7 @@ module.exports = async function specsFlow(triggerInteraction, ctx) {
                 torque: getField(submission, 'spec_torque') || null,
                 drivetrain: getField(submission, 'spec_drivetrain') || null,
                 transmission: getField(submission, 'spec_transmission') || null,
+                powertrain: getField(submission, 'spec_powertrain') || null,
             };
             const merged = finalizeSpecs(mergeSpecs(selectedVehicle.vehicleSpecs, updates));
 
