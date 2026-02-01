@@ -129,9 +129,9 @@ async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
         }),
         createEntry({
             key: 'brands_low',
-            label: 'Least Brands',
-            title: `Least Common Brands (${scopeText})`,
-            description: 'Least common brands by count.',
+            label: 'Least Popular Brands',
+            title: `Least Popular Brands (${scopeText})`,
+            description: 'Rarest brands (one single-vehicle brand plus the next few).',
             chartConfig: barChart(leastBrands.labels, leastBrands.counts, COLORS.secondary, {
                 xLabel: 'Num of vehicles',
                 yLabel: 'Brand',
@@ -496,12 +496,21 @@ async function leastCommonBrands(matchScope) {
 
     const sorted = Array.from(brandCounts.values())
         .filter((b) => b.count > 0)
-        .sort((a, b) => a.count - b.count || a.label.localeCompare(b.label))
-        .slice(0, 10);
+        .sort((a, b) => a.count - b.count || a.label.localeCompare(b.label));
+
+    // Take exactly one single-vehicle brand if present, then the next rare brands with count >= 2
+    const singles = sorted.filter((b) => b.count === 1);
+    const multis = sorted.filter((b) => b.count >= 2);
+
+    const result = [];
+    if (singles.length) {
+        result.push(singles[0]);
+    }
+    result.push(...multis.slice(0, Math.max(0, 10 - result.length)));
 
     return {
-        labels: sorted.map((b) => formatLabel(b.label)),
-        counts: sorted.map((b) => b.count),
+        labels: result.map((b) => formatLabel(b.label)),
+        counts: result.map((b) => b.count),
     };
 }
 
