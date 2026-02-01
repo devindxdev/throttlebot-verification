@@ -1,45 +1,78 @@
-
-# 🤖 ThrottleBot - Vehicle Verification Bot
+# 🤖 ThrottleBot Verification
 
 [![License](https://img.shields.io/github/license/devindxdev/throttlebot-verification?style=flat-square)](LICENSE)
 [![Issues](https://img.shields.io/github/issues/devindxdev/throttlebot-verification?style=flat-square)](https://github.com/devindxdev/throttlebot-verification/issues)
 [![Last Commit](https://img.shields.io/github/last-commit/devindxdev/throttlebot-verification?style=flat-square)](https://github.com/devindxdev/throttlebot-verification/commits/main)
 [![Discord](https://img.shields.io/discord/851413403222147073?label=Discord&style=flat-square)](https://discord.gg/Nh4A6HDZT4)
-[![Live Stats](https://img.shields.io/endpoint?style=flat-square&url=https%3A%2F%2Fthrottlebot-verify.herokuapp.com%2Fstatus%3Fbadge%3D1)](#live-status-endpoint)
+[![Live Stats](https://img.shields.io/endpoint?style=flat-square&url=https%3A%2F%2Fthrottlebot-verify.herokuapp.com%2Fstatus%3Fbadge%3D1)](https://throttlebot-verify.herokuapp.com/status)
 
-We're simplifying the process of verifying your vehicles across Discord by featuring a seamless and feature full experience.
+> A Discord-first vehicle verification platform with AI-assisted specs, live telemetry, and rich garages for thousands of enthusiasts.
 
-The bot utilizes Discord's latest API version V9 to provide you with the latest features that are available.
+## Highlights
+- **Trusted at scale** — serving large communities (AR12Gaming, The Car Community) with global + per-server stats.
+- **Garage-first UX** — cards, images, multi-collection views (Daily / Track / Project / Sold), and AI-generated specs.
+- **AI assist** — OpenAI-powered spec generation with human review & editing flows.
+- **Operations-ready** — live health/status endpoint, structured logging, and QuickChart visual telemetry for `/stats`.
+- **Modern Discord** — slash commands, buttons/menus, ephemeral flows; built on discord.js v14.
 
-+ A garage system to store and display all your vehicles.
-+ Seamless verifcation process with the help of buttons.
-+ Slash commands for a powerful and interactive experience.
-+ Syncing across different servers. (beta)
+## Feature Tour
+- **Verification flow**: `/verify` with guided decisions, overrides, and smart rejection logic.
+- **Garages**: personal collections, per-vehicle images, specs (manual or AI), emoji collection tags, and shareable embeds.
+- **Statistics**: approval rates, turnaround time, top/least brands, popular vehicles, AI override stats — all rendered via QuickChart and delivered in embeds.
+- **Admin tooling**: `/setup`, `/manage`, `/settings` for images, descriptions, collections, and specs.
+- **Status API**: `GET /status` returns live counts (`status`, `updatedAt`, `guilds`, `users`, `verifiedVehicles`, `totalVerifications`) for badges or dashboards.
 
-Featured in the [AR12Gaming](https://discord.gg/ar12) server and the biggest automotive discord, [The Car Community](https://discord.gg/cars) along with many others.
+## Live Status
+- Human-readable: [https://throttlebot-verify.herokuapp.com/status](https://throttlebot-verify.herokuapp.com/status)  
+- Badge-ready JSON: same endpoint with `?badge=1` (used above).
 
-## Getting Started
-1. Invite ThrottleBot Verification (hosted by us) to your server.
-- Recommended Link: [Click here](https://discord.com/api/oauth2/authorize?client_id=851411747641884712&permissions=157035129920&scope=bot%20applications.commands) 
-- Admin Link: [Click here](https://discord.com/api/oauth2/authorize?client_id=851411747641884712&permissions=8&scope=bot%20applications.commands)
-2. Use the `/setup` command to configure the bot inside your server.
-- The verification channel is where all the verification applications will be sent for processing by the team which will take care of verifications in your server. This channel should only be given access to the mentioned team members.
-- The log channel is where certain events such verification applicaton and garage changes are logged.
-- The guide channel is where the members will get to know how to verify with the help of a pre-made guide sent by ThrottleBot. You can delete the guide and keep your own custom one if you wish to.
-3. You go to `Server Settings -> Integrations -> Bot and Apps -> Click 'Manage' on ThrottleBot Verification -> Command Permissions` to whitelist or blacklist certain members or channels.
-4. Everything's setup! You can now test it out by using the `/verify` command and make sure everything is working as intented.
-5. You can join our [support server](https://discord.gg/Nh4A6HDZT4) if you need help with anything.
-6. Our Trello board can be found here: [ThrottleBot Verification Trello](https://trello.com/b/VkCeRfrR)
+## Tech Stack
+- **Runtime**: Node.js + discord.js v14
+- **Data**: MongoDB (Mongoose models for verifications + garages)
+- **AI**: OpenAI Chat Completions for spec enrichment
+- **Charts**: QuickChart (Chart.js v3) for dynamic embeds
+- **Infra**: Heroku dyno (worker) for bot; optional web dyno for status + static site
+- **CI/CD**: `heroku-postbuild` builds the Vite marketing site (`throttlebot-site`)
 
-> :exclamation:  **Please make sure that the bot has access to view and send messages in the channel you use the slash commands if it appears to be unresponsive.**
+## Local Development
+```bash
+git clone https://github.com/devindxdev/throttlebot-verification.git
+cd throttlebot-verification
+npm install
+cp .env.example .env   # fill in Discord + Mongo + OpenAI keys
+npm run start          # starts the bot (index.js)
+```
 
-## Commands
-- `/ping` Replies with pong
-- `/about` Information regarding the bot
-- `/invite` Invite the bot to your own server
-- `/setup` Setup the bot for your server
-- `/verify` Apply for verification of your vehicle
-- `/garage` View yours or another user's garage
-- `/search` Search server-wide for a specific vehicle
-- `/settings` Add your vehicle's images, set description and more personalisation options
-- `/manage` Manage verified rides, edit, delete them etc.
+### Running the marketing site locally
+```bash
+cd throttlebot-site
+npm install
+npm run dev            # Vite dev server
+```
+
+## Key Commands
+- `/verify` — submit a vehicle for approval
+- `/garage` — view garages; filter by collections (Daily/Track/Project/Sold)
+- `/settings` — manage images, descriptions, specs (manual or AI), collections
+- `/stats` — live charts (verifications over time, approval split, AI stats, turnaround, top brands, least popular brands, popular vehicles, top users)
+
+## Deployment Notes (Heroku)
+- **Single dyno option**: run `worker` only for the bot; keep `statusServer` enabled inside `index.js` to serve `/status`.
+- **Marketing site**: built during `heroku-postbuild` (`cd throttlebot-site && npm install && npm run build`). Serve `throttlebot-site/dist` via the status server or a CDN.
+- Ensure environment vars are set: `DISCORD_TOKEN`, `MONGO_URI`, `OPENAI_API_KEY`, `PORT` (for status server).
+
+## Security & License
+- Current license: **MIT** (permissive; include notice on reuse).
+- No telemetry beyond aggregate counts shown in `/status`.
+
+## Roadmap (shortlist)
+- Rich per-collection sharing links
+- In-bot moderation dashboard for verifiers
+- Optional non-commercial/source-available license variant
+
+## Support
+- Join the Discord: https://discord.gg/Nh4A6HDZT4
+- Open issues/PRs: https://github.com/devindxdev/throttlebot-verification
+
+---
+Crafted for car communities; optimized for reliability, clarity, and fast reviews.
