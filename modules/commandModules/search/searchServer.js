@@ -11,7 +11,8 @@ async function searchServer(
     guildData,
     footerData,
     embedColor,
-    searchTerm
+    searchTerm,
+    brandTerm = ''
 ){
     
     //Initiator Details
@@ -36,7 +37,27 @@ async function searchServer(
     //Search term returned no results.
     //User can search globally in this case.
 
-    const searchData = await garageSchema.find( { vehicle: { $regex: searchTerm , $options : 'i'} , guildId: guildId} )
+    const buildQuery = (scopeGuildId) => {
+        const clauses = [];
+        if (searchTerm) {
+            clauses.push({ vehicle: { $regex: searchTerm, $options: 'i' } });
+        }
+        if (brandTerm) {
+            clauses.push({
+                $or: [
+                    { vehicleBrand: { $regex: brandTerm, $options: 'i' } },
+                    { vehicleModel: { $regex: brandTerm, $options: 'i' } },
+                    { vehicle: { $regex: brandTerm, $options: 'i' } },
+                ],
+            });
+        }
+        const query = clauses.length ? { $and: clauses } : {};
+        if (scopeGuildId) query.guildId = scopeGuildId;
+        return query;
+    };
+
+    const serverQuery = buildQuery(guildId);
+    const searchData = await garageSchema.find(serverQuery);
     
     if(!searchData || searchData?.length === 0){
         const exitButton = new ButtonBuilder()
@@ -44,7 +65,7 @@ async function searchServer(
         .setLabel('Exit')
         .setStyle(ButtonStyle.Danger);
 
-        const searchGlobalData = await garageSchema.find( { vehicle: { $regex: searchTerm , $options : 'i'} } );
+        const searchGlobalData = await garageSchema.find(buildQuery(null));
 
         if(!searchGlobalData || searchGlobalData.length === 0){
             const row = new ActionRowBuilder() 

@@ -7,7 +7,9 @@ async function vehicleSearch(
     initiatorData,
     guildData,
     embedColor,
-    searchTerm
+    searchTerm,
+    brandTerm = '',
+    browseBrands = false
 ){
 
      //Initiator Details
@@ -41,13 +43,30 @@ async function vehicleSearch(
     If none are found, an error is displayed and the user has the option to search globally.
     2. Once the results are displayed, there will be 'Previous', 'Next' buttons for the pages and a 'Search Globally' option as well.- 
     */
+    // If nothing was provided, fall back to browsing brands so the user can pick.
+    const shouldBrowse = browseBrands || (!searchTerm && !brandTerm);
+
+    if (shouldBrowse) {
+        const { browseBrandsFlow } = require('./browseBrands.js');
+        await browseBrandsFlow({
+            interaction,
+            initiatorData,
+            guildData,
+            footerData,
+            embedColor,
+            mainInteractionId,
+        });
+        return;
+    }
+
     searchServer(
         interaction,
         initiatorData,
         guildData,
         footerData,
         embedColor,
-        searchTerm
+        searchTerm,
+        brandTerm
     );
 
 };
