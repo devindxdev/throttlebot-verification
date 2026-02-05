@@ -170,7 +170,7 @@ const LandingPage = () => {
             <div className="w-px h-8 bg-white/10 mx-4"></div>
             
             <a 
-              href="https://github.com/your-repo/throttlebot" 
+              href="https://github.com/devindxdev/throttlebot-verification" 
               target="_blank" 
               rel="noopener noreferrer" 
               className="p-2 text-neutral-400 hover:text-white hover:bg-white/5 rounded-md transition-all mr-2 group"
@@ -221,7 +221,15 @@ const LandingPage = () => {
                   Add to Discord
                 </button>
                 <div className="flex justify-center mt-8">
-                    <a href="https://github.com" className="text-neutral-500 hover:text-white"><Github size={24} /></a>
+                    <a
+                      href="https://github.com/devindxdev/throttlebot-verification"
+                      className="text-neutral-500 hover:text-white"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="View on GitHub"
+                    >
+                      <Github size={24} />
+                    </a>
                 </div>
              </div>
           </div>
