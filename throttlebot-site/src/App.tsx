@@ -276,7 +276,7 @@ const LandingPage = () => {
               <div className="absolute -right-8 bottom-0 w-1 h-20 bg-red-600 hidden lg:block"></div>
             </div>
             
-            <p className="text-base md:text-xl text-neutral-400 mb-8 md:mb-12 max-w-2xl font-light leading-relaxed border-l-2 border-red-600/50 pl-4 md:pl-0 text-left md:text-center">
+            <p className="text-base md:text-xl text-neutral-400 mb-8 md:mb-12 max-w-2xl font-light leading-relaxed border-l-2 border-red-600/50 pl-10 md:pl-10 text-left md:text-center">
               The automated standard for automotive communities. <br className="hidden md:block" />
               <span className="text-white font-medium">AI-assisted verification</span>, persistent user garages, and fleet analytics.
             </p>
