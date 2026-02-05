@@ -59,11 +59,6 @@ async function browseBrandsFlow({ interaction, initiatorData, guildData, footerD
 
     let scope = 'server';
     let brands = await fetchBrands({ guildId });
-    const globalBrands = await fetchBrands({});
-    if (brands.length === 0 && globalBrands.length > 0) {
-        scope = 'global';
-        brands = globalBrands;
-    }
     if (brands.length === 0) {
         await interaction.editReply({
             embeds: [errorEmbed('No brands found yet.', initiatorAvatar)],
@@ -93,11 +88,6 @@ async function browseBrandsFlow({ interaction, initiatorData, guildData, footerD
                 .setLabel('Next')
                 .setStyle(ButtonStyle.Secondary)
                 .setDisabled(!hasNext),
-            new ButtonBuilder()
-                .setCustomId(`searchBrandsToggle+${mainInteractionId}`)
-                .setLabel(scope === 'server' ? 'View Global' : 'View Server')
-                .setStyle(ButtonStyle.Primary)
-                .setDisabled(scope === 'server' ? globalBrands.length === 0 : false),
             new ButtonBuilder()
                 .setCustomId(`searchBrandsExit+${mainInteractionId}`)
                 .setLabel('Exit')
@@ -153,19 +143,6 @@ async function browseBrandsFlow({ interaction, initiatorData, guildData, footerD
         if (i.customId === `searchBrandsNext+${mainInteractionId}`) {
             page += 1;
             await i.deferUpdate();
-            await render();
-            return;
-        }
-        if (i.customId === `searchBrandsToggle+${mainInteractionId}`) {
-            await i.deferUpdate();
-            if (scope === 'server') {
-                scope = 'global';
-                brands = globalBrands;
-            } else {
-                scope = 'server';
-                brands = await fetchBrands({ guildId });
-            }
-            page = 0;
             await render();
             return;
         }
