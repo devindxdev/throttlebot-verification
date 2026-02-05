@@ -287,9 +287,12 @@ const LandingPage = () => {
                    INITIATE SETUP <ArrowRight className="w-4 h-4" />
                 </span>
               </button>
-              <button onClick={() => scrollToSection('garage')} className="w-full sm:w-auto px-8 md:px-10 py-4 md:py-5 bg-transparent hover:bg-white/5 text-white border border-white/20 skew-x-0 md:skew-x-[-12deg] rounded md:rounded-none font-bold text-sm transition-all group active:scale-95">
-                <span className="md:skew-x-[12deg] flex items-center gap-2">
-                  VIEW GARAGE <LayoutGrid className="w-4 h-4 text-neutral-500 group-hover:text-white transition-colors" />
+              <button
+                onClick={() => scrollToSection('garage')}
+                className="w-full sm:w-auto px-8 md:px-10 py-4 md:py-5 bg-transparent hover:bg-white/5 text-white border border-white/20 skew-x-0 md:skew-x-[-12deg] rounded md:rounded-none font-bold text-sm transition-all group active:scale-95 text-center"
+              >
+                <span className="md:skew-x-[12deg] flex items-center justify-center">
+                  VIEW GARAGE
                 </span>
               </button>
             </div>
@@ -472,9 +475,9 @@ const LandingPage = () => {
          <div className="absolute right-0 top-0 w-1/2 h-full bg-red-900/5 blur-3xl pointer-events-none"></div>
          
          <div className="container mx-auto px-6 relative z-10">
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+             <div className="flex flex-col lg:grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
                  {/* Left: Content */}
-                 <div className="order-2 lg:order-1">
+                 <div>
                      <div className="flex items-center gap-2 mb-4 text-red-500 font-mono text-xs uppercase tracking-widest">
                         <ShieldCheck size={14} /> Automated Guardrails
                      </div>
@@ -505,7 +508,7 @@ const LandingPage = () => {
                  </div>
 
                  {/* Right: Reject Screenshot */}
-                 <div className="order-1 lg:order-2 relative group">
+                 <div className="relative group">
                      <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-transparent opacity-20 blur rounded-xl"></div>
                      <div className="relative bg-[#1E1F22] p-2 rounded-xl border border-white/10 shadow-2xl">
                          <div className="flex items-center gap-2 mb-2 px-2 opacity-50">
