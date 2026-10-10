@@ -57,9 +57,14 @@ npm run dev            # Vite dev server
 - `/stats` — live charts (verifications over time, approval split, AI stats, turnaround, top brands, least popular brands, popular vehicles, top users)
 
 ## Deployment Notes (Heroku)
+
+- Privileged intents are not required: the bot requests only `Guilds` and `GuildMessages`. Leave Server Members, Presence, and Message Content intents disabled in the Developer Portal.
+- Without member events, pending applications are not closed immediately when someone leaves. Normal and override approvals fetch the individual applicant's current membership before saving approval or creating a garage entry; departed applicants' requests are closed at review time. Membership lookup failures leave the request unchanged for retry.
+- Automatic supporter tier synchronization from role-change events is paused. Existing saved premium profiles continue to work. The member event handlers are retained but are not registered while member access is disabled.
+- Deploy this version and restart the bot to stop requesting the revoked intent. The runtime uses `TOKEN` for the Discord token and `MONGOURI` for the database connection; keep these in your hosting provider's environment settings.
 - **Single dyno option**: run `worker` only for the bot; keep `statusServer` enabled inside `index.js` to serve `/status`.
 - **Marketing site**: built during `heroku-postbuild` (`cd throttlebot-site && npm install && npm run build`). Serve `throttlebot-site/dist` via the status server or a CDN.
-- Ensure environment vars are set: `DISCORD_TOKEN`, `MONGO_URI`, `OPENAI_API_KEY`, `PORT` (for status server).
+- Ensure environment vars are set: `TOKEN`, `MONGOURI`, `OPENAI_API_KEY`, `PORT` (for status server).
 
 ## Security & License
 - Current license: **MIT** (permissive; include notice on reuse).

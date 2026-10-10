@@ -8,6 +8,7 @@ const { greenColor } = require('../constants.js');
 const moment = require('moment');
 const mongoose = require('mongoose');
 const { resolveBrandFields } = require('../vehicleUtils.js');
+const { fetchApplicantMember, closeDepartedApplication } = require('./checkApplicantMembership.js');
 
 module.exports = async function handleApproval(interaction) {
     try {
@@ -39,6 +40,11 @@ module.exports = async function handleApproval(interaction) {
 
         if (!applicationData) throw new Error('No open verification application found for this message.');
         const { userId, vehicle, vehicleImageProxyURL, vehicleImageURL } = applicationData;
+        const applicantMember = await fetchApplicantMember(interaction.guild, userId);
+        if (!applicantMember) {
+            await closeDepartedApplication(interaction, applicationData);
+            return;
+        }
         const brandMeta = resolveBrandFields({
             vehicleName: vehicle,
             vehicleBrand: applicationData.vehicleBrand,
@@ -130,7 +136,6 @@ module.exports = async function handleApproval(interaction) {
         // Assign the verified vehicle role if it exists
         if (verifiedVehicleRoleId) {
             try {
-                const applicantMember = await interaction.guild.members.fetch(userId);
                 await applicantMember.roles.add(verifiedVehicleRoleId);
             } catch (error) {
                 if (error.message === 'Unknown Member') {

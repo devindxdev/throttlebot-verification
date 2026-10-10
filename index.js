@@ -14,7 +14,6 @@ const client = new Client({
 	intents: [
 		GatewayIntentBits.Guilds,
 		GatewayIntentBits.GuildMessages,
-		GatewayIntentBits.GuildMembers,
 	],
 });
 
@@ -42,6 +41,9 @@ const eventFiles = fs.readdirSync(eventsPath).filter((file) => file.endsWith('.j
 for (const file of eventFiles) {
 	const filePath = path.join(eventsPath, file);
 	const event = require(filePath);
+	// These workflows require privileged member events, which are unavailable
+	// while Guild Members access is disabled. Approval checks membership on demand.
+	if (['guildMemberRemove', 'guildMemberUpdate'].includes(event.name)) continue;
 
 	// Ensure event files are structured properly
 	if ('name' in event && 'execute' in event) {

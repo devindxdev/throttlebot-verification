@@ -7,6 +7,7 @@ const { errorEmbed } = require('../utility.js');
 const { greenColor } = require('../constants.js');
 const mongoose = require('mongoose');
 const { resolveBrandFields } = require('../vehicleUtils.js');
+const { fetchApplicantMember, closeDepartedApplication } = require('./checkApplicantMembership.js');
 
 /**
  * Overrides an auto-denied application and approves it.
@@ -68,6 +69,11 @@ module.exports = async function handleOverrideApprove(interaction) {
         if (!application) throw new Error('No auto-denied application found for this message.');
 
         const { userId, vehicle, vehicleImageURL, vehicleImageProxyURL } = application;
+        const applicantMember = await fetchApplicantMember(interaction.guild, userId);
+        if (!applicantMember) {
+            await closeDepartedApplication(modalSubmit, application);
+            return;
+        }
         const brandMeta = resolveBrandFields({
             vehicleName: vehicle,
             vehicleBrand: application.vehicleBrand,
@@ -152,10 +158,7 @@ module.exports = async function handleOverrideApprove(interaction) {
 
         // Assign verified role if configured
         if (guildProfile.verifiedVehicleRoleId) {
-            await interaction.guild.members
-                .fetch(userId)
-                .then((member) => member.roles.add(guildProfile.verifiedVehicleRoleId).catch(() => {}))
-                .catch(() => {});
+            await applicantMember.roles.add(guildProfile.verifiedVehicleRoleId).catch(() => {});
         }
 
         // Log to logging channel
