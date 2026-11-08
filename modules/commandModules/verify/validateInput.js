@@ -1,3 +1,5 @@
+const { vehicleKey } = require('../../verification/vehicleIdentity');
+const { attachmentKind, assertEvidenceAllowed } = require('../../verification/evidencePolicy');
 const { errorEmbed } = require('../../utility.js');
 const { 
     obtainAllUserVehicles, 
@@ -20,10 +22,12 @@ module.exports = async (interaction, vehicleAttachment, vehicleName, initiatorId
             );
         }
 
-        // Validate file size and type (allow images and videos)
-        const { size, contentType, name } = vehicleAttachment;
-        const isImage = contentType?.includes('image');
-        const isVideo = contentType?.includes('video');
+        assertEvidenceAllowed(guildProfile, vehicleAttachment, { guildName: interaction.guild.name, username: interaction.user.username });
+
+        const { name = '' } = vehicleAttachment || {};
+        const kind = attachmentKind(vehicleAttachment);
+        const isImage = kind === 'image';
+        const isVideo = kind === 'video';
         
         if (!isImage && !isVideo) {
             throw new Error('Unsupported file type. Please upload an image or a short video.');
@@ -50,15 +54,17 @@ module.exports = async (interaction, vehicleAttachment, vehicleName, initiatorId
 
         // Check for existing vehicles in the user's garage
         const userVehicles = await obtainAllUserVehicles(initiatorId, interaction.guild.id);
-        if (userVehicles.some((vehicle) => vehicle.vehicle.toLowerCase() === vehicleName.toLowerCase())) {
+        if (userVehicles.some((vehicle) => vehicleKey(vehicle.vehicle) === vehicleKey(vehicleName))) {
             throw new Error(
                 `You already have a verified vehicle named "${vehicleName}".`
             );
         }
 
+        await require('../../verification/expiry').closeExpiredApplications();
+
         // Check for open applications with the same vehicle name
         const openApplications = await obtainAllOpenUserApplications(initiatorId, interaction.guild.id);
-        if (openApplications.some((app) => app.vehicle.toLowerCase() === vehicleName.toLowerCase())) {
+        if (openApplications.some((app) => vehicleKey(app.vehicle) === vehicleKey(vehicleName))) {
             throw new Error(
                 `You already have an open application for "${vehicleName}". Wait for it to be processed or use a different name.`
             );

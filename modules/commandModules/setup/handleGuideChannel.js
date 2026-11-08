@@ -6,6 +6,7 @@ const {
     ComponentType,
 } = require('discord.js');
 const guildProfileSchema = require('../../../mongodb_schema/guildProfileSchema.js');
+const { buildVerificationGuide } = require('../../verification/guideEmbed');
 const { greenIndicator } = require('../../constants.js');
 module.exports = async (interaction, guildProfile) => {
     try {
@@ -62,37 +63,7 @@ module.exports = async (interaction, guildProfile) => {
             );
 
             // Send the guide embed to the selected channel
-            const guideEmbed = new EmbedBuilder()
-                .setTitle('How to Verify Your Vehicle')
-                .setDescription(
-                    'Follow the steps below to verify your vehicle. Make sure you meet all requirements.'
-                )
-                .addFields(
-                    {
-                        name: 'Steps',
-                        value:
-                            '1. Take a picture of your vehicle while holding the keys and a handwritten note with:\n   - Server name\n   - Your Discord username and tag.\n' +
-                            '2. Use the `/verify` command to upload the image and provide vehicle details.\n' +
-                            '3. Wait for staff approval (keep DMs open).',
-                    },
-                    {
-                        name: 'Rules & Requirements',
-                        value:
-                            '1. The vehicle must be yours (no rentals or friends’ vehicles).\n' +
-                            '2. Handwritten note must be clear and visible.\n' +
-                            '3. Image must clearly show the vehicle and note.',
-                    },
-                    {
-                        name: 'After Verification',
-                        value:
-                            '1. View your garage using `/garage`.\n' +
-                            '2. Customize your vehicle using `/settings`.',
-                    }
-                )
-                .setImage(
-                    'https://cdn.discordapp.com/attachments/975485952325726278/999390701471141928/Example_Image_1.png'
-                )
-                .setColor('#FFFCFF');
+            const guideEmbed = buildVerificationGuide(guildProfile, interaction.guild.name);
 
             await channel.send({ embeds: [guideEmbed] });
 

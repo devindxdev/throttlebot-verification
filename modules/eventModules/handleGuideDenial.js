@@ -1,4 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { commitDecision } = require('../verification/decisions');
 const verificationSchema = require('../../mongodb_schema/verificationApplicationSchema.js');
 const { obtainGuildProfile } = require('../database.js');
 const { errorEmbed } = require('../utility.js');
@@ -29,17 +30,10 @@ module.exports = async function handleGuideDenial(interaction) {
         });
         if (!application) throw new Error('No open verification application found for this message.');
 
-        await verificationSchema.updateOne(
-            { _id: application._id },
-            {
-                $set: {
-                    status: 'closed',
-                    decision: 'denied-read-guide',
-                    decidedBy: moderatorId,
-                    decidedOn: new Date().toISOString(),
-                },
-            }
-        );
+        await commitDecision(application, {
+            status: 'closed', decision: 'denied-read-guide', decidedBy: moderatorId, decidedOn: new Date(),
+            denialReason: 'Please read the verification guide and resubmit.',
+        });
 
         const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0]).setColor('#FFB347'); // orange tone
         const fields = updatedEmbed.data.fields || [];

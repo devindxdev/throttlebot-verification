@@ -1,4 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { commitDecision } = require('../verification/decisions');
 const verificationSchema = require('../../mongodb_schema/verificationApplicationSchema.js');
 const { obtainGuildProfile } = require('../database.js');
 const { errorEmbed } = require('../utility.js');
@@ -39,18 +40,10 @@ module.exports = async function handleDenial(interaction) {
         }
 
         // Persist decision
-        await verificationSchema.updateOne(
-            { _id: application._id },
-            {
-                $set: {
-                    status: 'closed',
-                    decision: 'denied',
-                    decidedBy: moderatorId,
-                    decidedOn: new Date().toISOString(),
-                    denialReason: reason,
-                },
-            }
-        );
+        await commitDecision(application, {
+            status: 'closed', decision: 'denied', decidedBy: moderatorId, decidedOn: new Date(),
+            denialReason: reason,
+        });
 
         // Update the message embed
         const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0]).setColor('#FF6961');

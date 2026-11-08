@@ -94,54 +94,14 @@ async function getServerStats(passportServerId) {
 
 async function getEstimatedETA(guildId) {
     try {
-        // Fetch the last 50 applications for the guild, sorted by submission date
-        const applications = await verificationSchema
-            .find({ guildId, decision: { $in: ['approved', 'denied'] } })
-            .sort({ submittedOn: -1 })
-            .limit(50);
-
-        if (!applications || applications.length === 0 || applications.length < 20) {
-            return '24 - 48 Hours';
-        }
-
-        // Calculate the duration for each application
-        const durations = applications
-            .filter(app => app.decidedOn)
-            .map(app => {
-                const submittedDate = new Date(app.submittedOn).getTime();
-                // decidedOn is already in milliseconds, no need to convert
-                return app.decidedOn - submittedDate;
-            });
-
-        if (durations.length === 0) {
-            return '24 - 48 Hours';
-        }
-
-        // Calculate the average duration in milliseconds
-        const averageDuration = durations.reduce((sum, duration) => sum + duration, 0) / durations.length;
-
-        // Convert the average duration to a human-readable format
-        const hours = Math.floor(averageDuration / (1000 * 60 * 60));
-        const minutes = Math.floor((averageDuration % (1000 * 60 * 60)) / (1000 * 60));
-
-        // Build the time string with proper pluralization
-        let timeString = '';
-        if (hours > 0) {
-            timeString += `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
-            if (minutes > 0) {
-                timeString += ` and ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
-            }
-        } else {
-            timeString = `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
-        }
-
-        return timeString;
+        const applications = await verificationSchema.find({ guildId })
+            .select('status decision decidedBy submittedOn createdAt decidedOn').lean();
+        return require('./verification/reviewEta').estimateReviewEta(applications);
     } catch (error) {
-        console.error('Error in getEstimatedETA:', error);
-        return 'Failed to estimate the wait time.';
+        console.error('Error in getEstimatedETA:', error.name);
+        return '24 - 48 Hours';
     }
 }
-
 
 
 module.exports = { 

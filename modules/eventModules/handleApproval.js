@@ -1,13 +1,10 @@
 const { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
-const { obtainGuildProfile, obtainUserProfile } = require('../database.js');
+const { obtainGuildProfile } = require('../database.js');
 const verificationSchema = require('../../mongodb_schema/verificationApplicationSchema.js');
-const garageSchema = require('../../mongodb_schema/garageSchema.js');
-const userProfileSchema = require('../../mongodb_schema/userProfileSchema.js');
 const { errorEmbed } = require('../utility.js');
 const { greenColor } = require('../constants.js');
-const moment = require('moment');
-const mongoose = require('mongoose');
 const { resolveBrandFields } = require('../vehicleUtils.js');
+const { commitDecision } = require('../verification/decisions');
 const { fetchApplicantMember, closeDepartedApplication } = require('./checkApplicantMembership.js');
 
 module.exports = async function handleApproval(interaction) {
@@ -19,7 +16,7 @@ module.exports = async function handleApproval(interaction) {
         const initiatorId = interaction.user.id;
         const initiatorTag = interaction.user.tag;
         const initiatorAvatar = interaction.user.displayAvatarURL({ dynamic: true });
-        const todaysDate = moment.utc();
+        const todaysDate = new Date();
 
         // Fetch guild profile
         const guildProfile = await obtainGuildProfile(guildId);
@@ -51,59 +48,11 @@ module.exports = async function handleApproval(interaction) {
             vehicleModel: applicationData.vehicleModel,
         });
 
-        // Create or update the user's profile
-        let userProfile = await obtainUserProfile(userId);
-        if (!userProfile) {
-            const newUserProfile = new userProfileSchema({
-                _id: mongoose.Types.ObjectId(),
-                userId,
-                premiumUser: false,
-                premiumTier: 0,
-                embedColor: '',
-                garageThumbnail: '',
-                sortPreference: 'default',
-            });
-            await newUserProfile.save();
-        }
-
-        // Update the verification application as "approved"
-        await verificationSchema.updateOne(
-            { applicationMessageId },
-            {
-                $set: {
-                    status: 'closed',
-                    decision: 'approved',
-                    decidedBy: initiatorId,
-                    decidedOn: todaysDate,
-                    vehicleBrand: applicationData.vehicleBrand || brandMeta.brand,
-                    vehicleModel: applicationData.vehicleModel || brandMeta.model,
-                },
-            }
-        );
-
-        // Create a new verified ride in the garage if it doesn't exist
-        const existingRide = await garageSchema.findOne({ guildId, userId, vehicle });
-        if (!existingRide) {
-            const newVerifiedRide = new garageSchema({
-                _id: mongoose.Types.ObjectId(),
-                guildId,
-                userId,
-                vehicle,
-                vehicleBrand: brandMeta.brand,
-                vehicleModel: brandMeta.model,
-                vehicleImages: [],
-                vehicleDescription: null,
-                vehicleAddedDate: todaysDate,
-                verificationImageLink: vehicleImageURL,
-                embedColor: null,
-            });
-            await newVerifiedRide.save();
-        } else if (!existingRide.vehicleBrand && brandMeta.brand) {
-            await garageSchema.updateOne(
-                { _id: existingRide._id },
-                { $set: { vehicleBrand: brandMeta.brand, vehicleModel: brandMeta.model } }
-            );
-        }
+        await commitDecision(applicationData, {
+            status: 'closed', decision: 'approved', decidedBy: initiatorId, decidedOn: todaysDate,
+            vehicleBrand: applicationData.vehicleBrand || brandMeta.brand,
+            vehicleModel: applicationData.vehicleModel || brandMeta.model,
+        }, 'approve');
 
         // Update the embed in the interaction message
         const vApplicationEmbed = EmbedBuilder.from(interaction.message.embeds[0]);

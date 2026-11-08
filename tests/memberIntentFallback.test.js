@@ -5,6 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { EmbedBuilder, GatewayIntentBits, Collection } = require('discord.js');
 const database = require('../modules/database.js');
+const mongoose = require('mongoose');
 const verificationSchema = require('../mongodb_schema/verificationApplicationSchema.js');
 const garageSchema = require('../mongodb_schema/garageSchema.js');
 const userProfileSchema = require('../mongodb_schema/userProfileSchema.js');
@@ -18,9 +19,13 @@ function fixture(status, fetchError) {
         applicationMessageId: 'message-id', status,
         vehicleImageURL: 'https://example.com/car.png',
     };
-    const updates = mock.method(verificationSchema, 'updateOne', async () => ({ modifiedCount: 1 }));
+    const session = { withTransaction: async callback => callback(), endSession: async () => {} };
+    mock.method(mongoose, 'startSession', async () => session);
+    const updates = mock.method(verificationSchema, 'findOneAndUpdate', async () => application);
+    mock.method(garageSchema, 'updateOne', async () => ({ modifiedCount: 1 }));
+    mock.method(userProfileSchema, 'updateOne', async () => ({ modifiedCount: 1 }));
     mock.method(verificationSchema, 'findOne', async () => application);
-    const garageLookup = mock.method(garageSchema, 'findOne', async () => ({ vehicleBrand: 'Honda' }));
+    const garageLookup = mock.method(garageSchema, 'findOne', () => ({ session: async () => ({ _id: 'existing-ride', vehicle: 'Honda Civic', vehicleBrand: 'Honda' }) }));
     const garageSave = mock.method(garageSchema.prototype, 'save', async () => {});
     const profileSave = mock.method(userProfileSchema.prototype, 'save', async () => {});
     mock.method(database, 'obtainGuildProfile', async () => ({ verifiedVehicleRoleId: 'role-id' }));
@@ -70,7 +75,9 @@ for (const [handlerName, status, approvedDecision] of [
         await run(f);
         assert.deepEqual(f.memberFetch.mock.calls[0].arguments, [{ user: 'applicant-id', force: true }]);
         const [filter, update] = f.updates.mock.calls[0].arguments;
-        assert.deepEqual(filter, { _id: 'application-id', guildId: 'guild-id', status });
+        assert.equal(filter._id, 'application-id');
+        assert.equal(filter.guildId, 'guild-id');
+        assert.equal(filter.status, status);
         assert.equal(update.$set.decision, 'denied | User Left');
         assert.equal(update.$set.status, 'closed');
         assert.equal(f.garageLookup.mock.callCount(), 0);

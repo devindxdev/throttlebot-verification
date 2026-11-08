@@ -6,6 +6,11 @@ module.exports = {
 		// Ignore non-command interactions
 		if (!interaction.isCommand()) return;
 
+		if (interaction.client.databaseReady === false) {
+			await interaction.reply({ content: 'The bot is connecting to its database. Please try again shortly.', ephemeral: true });
+			return;
+		}
+
 		const command = interaction.client.commands.get(interaction.commandName);
 
 		// If the command does not exist

@@ -17,6 +17,8 @@ const client = new Client({
 	],
 });
 
+client.databaseReady = false;
+
 // Command handler
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');

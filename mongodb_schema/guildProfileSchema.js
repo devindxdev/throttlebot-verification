@@ -15,6 +15,7 @@ const guildSchema = new mongoose.Schema(
     passportEnabled: { type: Boolean, default: false },
     passportGuildId: { type: String, default: null },
     geminiAnalysisEnabled: { type: Boolean, default: false },
+    videoVerificationRequired: { type: Boolean, default: false },
     addedOn: { type: Date, default: Date.now },
   },
   {

@@ -1,5 +1,6 @@
 const { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
 const verificationSchema = require('../../mongodb_schema/verificationApplicationSchema.js');
+const { commitDecision } = require('../verification/decisions');
 const garageSchema = require('../../mongodb_schema/garageSchema.js');
 const { obtainGuildProfile } = require('../database.js');
 const { errorEmbed } = require('../utility.js');
@@ -46,34 +47,24 @@ module.exports = async function handleOverrideDeny(interaction) {
         const initiatorTag = interaction.user.tag;
         const applicationMessageId = interaction.message.id;
 
-        const application = await verificationSchema.findOne({ applicationMessageId, guildId });
+        const application = await verificationSchema.findOne({ applicationMessageId, guildId, status: 'auto-approved' });
         if (!application) throw new Error('No application found for this message.');
 
         const guildProfile = await obtainGuildProfile(guildId);
         if (!guildProfile) throw new Error('Server profile not set up.');
 
-        // Delete garage entry created by auto-approval
-        await garageSchema.deleteOne({ guildId, userId: application.userId, vehicle: application.vehicle });
+        await commitDecision(application, {
+            status: 'closed', decision: 'overridden-denied', decidedBy: initiatorId, decidedOn: new Date(),
+            overrideReason, denialReason: overrideReason,
+        }, 'remove');
 
-        // Remove verified role if present
-        if (guildProfile.verifiedVehicleRoleId) {
+        // Preserve the role while the user still has another verified vehicle.
+        const remainingVehicles = await garageSchema.countDocuments({ guildId, userId: application.userId });
+        if (guildProfile.verifiedVehicleRoleId && remainingVehicles === 0) {
             await interaction.guild.members.fetch(application.userId)
-                .then((member) => member.roles.remove(guildProfile.verifiedVehicleRoleId).catch(() => {}))
+                .then(member => member.roles.remove(guildProfile.verifiedVehicleRoleId).catch(() => {}))
                 .catch(() => {});
         }
-
-        // Update application
-        await verificationSchema.updateOne(
-            { applicationMessageId },
-            {
-                $set: {
-                    status: 'closed',
-                    decision: 'overridden-denied',
-                    decidedBy: initiatorId,
-                    decidedOn: new Date().toISOString(),
-                },
-            }
-        );
 
         // Update message embed
         const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0])

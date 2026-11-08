@@ -1,12 +1,10 @@
 const { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
 const verificationSchema = require('../../mongodb_schema/verificationApplicationSchema.js');
-const garageSchema = require('../../mongodb_schema/garageSchema.js');
-const userProfileSchema = require('../../mongodb_schema/userProfileSchema.js');
-const { obtainGuildProfile, obtainUserProfile } = require('../database.js');
+const { obtainGuildProfile } = require('../database.js');
 const { errorEmbed } = require('../utility.js');
 const { greenColor } = require('../constants.js');
-const mongoose = require('mongoose');
 const { resolveBrandFields } = require('../vehicleUtils.js');
+const { commitDecision } = require('../verification/decisions');
 const { fetchApplicantMember, closeDepartedApplication } = require('./checkApplicantMembership.js');
 
 /**
@@ -80,59 +78,12 @@ module.exports = async function handleOverrideApprove(interaction) {
             vehicleModel: application.vehicleModel,
         });
 
-        // Create or ensure user profile exists
-        let userProfile = await obtainUserProfile(userId);
-        if (!userProfile) {
-            const newProfile = new userProfileSchema({
-                _id: mongoose.Types.ObjectId(),
-                userId,
-                premiumUser: false,
-                premiumTier: 0,
-                embedColor: '',
-                garageThumbnail: '',
-                sortPreference: 'default',
-            });
-            await newProfile.save();
-        }
-
-        // Avoid duplicate garage entry
-        const existingRide = await garageSchema.findOne({ guildId, userId, vehicle });
-        if (!existingRide) {
-            const newRide = new garageSchema({
-                _id: mongoose.Types.ObjectId(),
-                guildId,
-                userId,
-                vehicle,
-                vehicleBrand: brandMeta.brand,
-                vehicleModel: brandMeta.model,
-                vehicleImages: [],
-                vehicleDescription: null,
-                vehicleAddedDate: new Date().toISOString(),
-                verificationImageLink: vehicleImageURL,
-                embedColor: null,
-            });
-            await newRide.save();
-        } else if (!existingRide.vehicleBrand && brandMeta.brand) {
-            await garageSchema.updateOne(
-                { _id: existingRide._id },
-                { $set: { vehicleBrand: brandMeta.brand, vehicleModel: brandMeta.model } }
-            );
-        }
-
-        // Update application status
-        await verificationSchema.updateOne(
-            { _id: application._id },
-            {
-                $set: {
-                    status: 'closed',
-                    decision: 'overridden-approved',
-                    decidedBy: moderatorId,
-                    decidedOn: new Date().toISOString(),
-                    vehicleBrand: application.vehicleBrand || brandMeta.brand,
-                    vehicleModel: application.vehicleModel || brandMeta.model,
-                },
-            }
-        );
+        await commitDecision(application, {
+            status: 'closed', decision: 'overridden-approved', decidedBy: moderatorId, decidedOn: new Date(),
+            vehicleBrand: application.vehicleBrand || brandMeta.brand,
+            vehicleModel: application.vehicleModel || brandMeta.model,
+            overrideReason,
+        }, 'approve');
 
         // Update message embed
         const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0])

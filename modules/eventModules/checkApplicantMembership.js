@@ -1,4 +1,5 @@
 const { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
+const { commitDecision } = require('../verification/decisions');
 const verificationSchema = require('../../mongodb_schema/verificationApplicationSchema.js');
 const { redColor, botId } = require('../constants.js');
 
@@ -15,15 +16,10 @@ async function fetchApplicantMember(guild, userId) {
 }
 
 async function closeDepartedApplication(interaction, application) {
-    await verificationSchema.updateOne(
-        { _id: application._id, guildId: interaction.guild.id, status: application.status },
-        { $set: {
-            status: 'closed',
-            decision: 'denied | User Left',
-            decidedBy: botId,
-            decidedOn: Date.now(),
-        } }
-    );
+    await commitDecision(application, {
+        status: 'closed', decision: 'denied | User Left', decidedBy: botId, decidedOn: new Date(),
+        denialReason: 'User left the server.',
+    });
 
     const embed = EmbedBuilder.from(interaction.message.embeds[0]);
     const statusField = (embed.data.fields || []).find(field => field.name.toLowerCase().includes('status'));

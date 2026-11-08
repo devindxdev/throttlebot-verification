@@ -80,6 +80,13 @@ module.exports = {
 			'Welcome to the Server Setup menu! Use this menu to configure key settings for your server. Each option allows you to personalize the bot for your community. Select an option from the dropdown menu below to get started.'
 		)
 		.addFields(
+            {
+                name: 'Verification evidence',
+                value: guildProfile.videoVerificationRequired
+                    ? '**Video required**\nEvery vehicle requires a video reviewed by staff.'
+                    : '**Photo or video**\nMembers can submit either type of evidence.',
+                inline: false,
+            },
 			{
 				name: '🌍 Global Passport',
 				value: guildProfile.passportGuildId
@@ -125,7 +132,9 @@ module.exports = {
 			,
 				{
 					name: '🤖 AI Verification',
-					value: guildProfile.geminiAnalysisEnabled
+					value: guildProfile.videoVerificationRequired
+                        ? '**Video review by staff**\nImage AI analysis does not run for video submissions.'
+                        : guildProfile.geminiAnalysisEnabled
 						? '**Enabled**\nApplications will be auto-reviewed by AI before manual review.'
 						: '**Disabled**\nAuto-analysis of applications is turned off.',
 					inline: false,

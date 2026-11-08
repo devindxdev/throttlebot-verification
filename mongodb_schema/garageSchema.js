@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { vehicleKey } = require('../modules/verification/vehicleIdentity');
 
 /**
  * Garage entries for verified vehicles.
@@ -8,6 +9,7 @@ const garageSchema = new mongoose.Schema(
     guildId: { type: String, required: true, index: true },
     userId: { type: String, required: true, index: true },
     vehicle: { type: String, required: true },
+    vehicleKey: { type: String },
     vehicleBrand: { type: String, default: null, index: true },
     vehicleModel: { type: String, default: null },
     vehicleSpecs: {
@@ -40,7 +42,19 @@ const garageSchema = new mongoose.Schema(
   }
 );
 
-// Prevent duplicate vehicle names per user per guild
-garageSchema.index({ guildId: 1, userId: 1, vehicle: 1 }, { unique: true });
+// Legacy records are keyed by the maintenance migration. The partial index can
+// be installed immediately without deleting or rewriting legacy garage entries.
+garageSchema.index({ guildId: 1, userId: 1, vehicleKey: 1 }, {
+    unique: true, partialFilterExpression: { vehicleKey: { $type: 'string' } },
+    name: 'unique_owner_vehicle_key',
+});
+garageSchema.pre('validate', function () { this.vehicleKey = vehicleKey(this.vehicle); });
+for (const operation of ['updateOne', 'findOneAndUpdate']) {
+    garageSchema.pre(operation, function () {
+        const update = this.getUpdate();
+        if (update?.$set?.vehicle != null) update.$set.vehicleKey = vehicleKey(update.$set.vehicle);
+        else if (update?.vehicle != null) update.vehicleKey = vehicleKey(update.vehicle);
+    });
+}
 
 module.exports = mongoose.model('Verified Vehicles', garageSchema);

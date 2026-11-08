@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { commitDecision } = require('../verification/decisions');
 const verificationSchema = require('../../mongodb_schema/verificationApplicationSchema.js');
-const userProfileSchema = require('../../mongodb_schema/userProfileSchema.js');
-const { obtainGuildProfile, obtainUserProfile } = require('../database.js');
+const { obtainGuildProfile } = require('../database.js');
 const { errorEmbed } = require('../utility.js');
 
 /**
@@ -30,32 +30,10 @@ module.exports = async function handleVerificationBan(interaction) {
         });
         if (!application) throw new Error('No open verification application found for this message.');
 
-        // Ensure user profile exists and mark banned
-        const existingProfile = await obtainUserProfile(application.userId);
-        if (!existingProfile) {
-            await userProfileSchema.create({
-                userId: application.userId,
-                verificationBanned: true,
-            });
-        } else {
-            await userProfileSchema.updateOne(
-                { userId: application.userId },
-                { $set: { verificationBanned: true } }
-            );
-        }
-
-        // Update application record
-        await verificationSchema.updateOne(
-            { _id: application._id },
-            {
-                $set: {
-                    status: 'closed',
-                    decision: 'banned',
-                    decidedBy: moderatorId,
-                    decidedOn: new Date().toISOString(),
-                },
-            }
-        );
+        await commitDecision(application, {
+            status: 'closed', decision: 'banned', decidedBy: moderatorId, decidedOn: new Date(),
+            denialReason: 'User banned from verification.',
+        }, 'ban');
 
         // Update embed
         const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0]).setColor('#FF6961');

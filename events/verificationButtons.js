@@ -21,6 +21,10 @@ module.exports = {
         if (!supportedActions.includes(action)) return;
 
         try {
+            if (interaction.client.databaseReady === false) {
+                await interaction.reply({ content: 'The bot is connecting to its database. Please try again shortly.', ephemeral: true });
+                return;
+            }
             // Route the action to its corresponding handler
             switch (action) {
                 case 'approveApplication':

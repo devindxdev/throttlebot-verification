@@ -1,6 +1,6 @@
 const verificationSchema = require('../../../mongodb_schema/verificationApplicationSchema.js');
 const garageSchema = require('../../../mongodb_schema/garageSchema.js');
-const { resolveBrandFields } = require('../../vehicleUtils.js');
+const { applicationMetrics, garageMetrics } = require('./statsMetrics.js');
 
 const QUICKCHART_BASE = 'https://quickchart.io/chart?c=';
 const COLORS = {
@@ -15,39 +15,24 @@ const COLORS = {
     black: '#000000',
 };
 
-const VEHICLE_BRAND_PREFIXES = new Set([
-    'acura', 'alfa', 'alfa romeo', 'aston', 'aston martin', 'audi', 'bentley', 'bmw', 'buick', 'cadillac',
-    'chevrolet', 'chevy', 'chrysler', 'dodge', 'ferrari', 'fiat', 'ford', 'gmc', 'genesis', 'honda', 'hummer',
-    'hyundai', 'infiniti', 'jaguar', 'jeep', 'kia', 'lamborghini', 'land', 'land rover', 'lexus', 'lincoln',
-    'maserati', 'mazda', 'mclaren', 'mercedes', 'mercedes benz', 'mercedes-benz', 'mini', 'mitsubishi', 'nissan',
-    'oldsmobile', 'polestar', 'pontiac', 'porsche', 'ram', 'rolls', 'rolls royce', 'saab', 'saturn', 'scion',
-    'subaru', 'tesla', 'toyota', 'volkswagen', 'vw', 'volvo',
-]);
-
 async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
-    const matchScope = scope === 'server' && guildId ? { guildId } : {};
-
-    const [
-        timeSeries,
-        approvalRates,
-        aiStats,
-        turnaround,
-        brandApproval,
-        topBrands,
-        leastBrands,
-        topVehicles,
-        topUsers,
-    ] = await Promise.all([
-        verificationsOverTime(matchScope),
-        approvalDenialRate(matchScope),
-        aiApprovalStats(matchScope),
-        averageTurnaround(matchScope),
-        brandApprovalRates(matchScope),
-        mostCommonBrands(matchScope),
-        leastCommonBrands(matchScope),
-        mostPopularVehicles(matchScope),
-        topUsersByVehicles(matchScope, client),
+    if (!['server', 'global'].includes(scope)) throw new Error('Invalid stats scope.');
+    if (scope === 'server' && !guildId) throw new Error('Server stats must be requested in a server.');
+    const matchScope = scope === 'server' ? { guildId } : {};
+    // Read each collection once so all charts use the same set of records.
+    const [applications, vehicles] = await Promise.all([
+        verificationSchema.find(matchScope)
+            .select('vehicle vehicleBrand vehicleModel decision status decidedBy submittedOn createdAt decidedOn').lean(),
+        garageSchema.find(matchScope).select('vehicle vehicleBrand vehicleModel userId').lean(),
     ]);
+    const { timeSeries, totals: approvalRates, ai: aiStats, turnaround, brandApproval, unknownDecisionBrands } = applicationMetrics(applications);
+    const { topBrands, leastBrands, topVehicles, topUsers: users, unknownBrands } = garageMetrics(vehicles);
+    const labelMap = await resolveUserLabels(users.map(user => user.label), client);
+    const topUsers = { labels: users.map(user => labelMap.get(user.label) || user.label), counts: users.map(user => user.count) };
+    const garageNote = scope === 'global'
+        ? 'Counts garage entries across servers; the same vehicle may appear in multiple servers.'
+        : 'Counts current garage entries, including sold collections.';
+    const decisionNote = `${approvalRates.approved} approved, ${approvalRates.denied} denied. Pending, expired and unknown outcomes excluded (${approvalRates.excluded}). Denials include guide rejections, bans and user-left closures. Each submission counts separately.`;
 
     const scopeText = scopeLabel(scope, guildName);
 
@@ -56,7 +41,7 @@ async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
             key: 'over_time',
             label: 'Verifications Over Time',
             title: `Verifications Over Time (${scopeText})`,
-            description: 'Annual counts of approvals and denials (since the start).',
+            description: `Final outcomes grouped by submission year (UTC). ${decisionNote} Missing/invalid or future submission dates excluded: ${timeSeries.missingSubmissionDates}.`,
             chartConfig: lineChart(
                 timeSeries.labels,
                 [
@@ -70,7 +55,7 @@ async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
             key: 'approval_rate',
             label: 'Approval vs Denial',
             title: `Approval vs Denial (${scopeText})`,
-            description: 'Overall approval / denial split.',
+            description: decisionNote,
             chartConfig: pieChart(
                 ['Approved', 'Denied'],
                 [approvalRates.approved, approvalRates.denied],
@@ -81,7 +66,7 @@ async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
             key: 'ai_stats',
             label: 'AI Approval Stats',
             title: `AI Approval Stats (${scopeText})`,
-            description: 'Auto approvals/denials and overrides.',
+            description: `AI approved: ${aiStats.autoApproved}; AI denied: ${aiStats.autoDenied}; overridden to denied: ${aiStats.overrideToDenied}; overridden to approved: ${aiStats.overrideToApproved}. These are mutually exclusive current outcomes. Pending appeals excluded; earlier AI decisions replaced by appeal handling cannot be reconstructed.`,
             chartConfig: pieChart(
                 ['AI Approved', 'AI Denied', 'Override (Approved→Denied)', 'Override (Denied→Approved)'],
                 [aiStats.autoApproved, aiStats.autoDenied, aiStats.overrideToDenied, aiStats.overrideToApproved],
@@ -92,7 +77,7 @@ async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
             key: 'brand_approval',
             label: 'Brand Approval Rate',
             title: `Brand Approval Rate (${scopeText})`,
-            description: 'Top brands by approval percentage (min 3 decisions).',
+            description: `Approval percentages for the ten most-reviewed recognized brands (minimum 3 decisions, sample sizes shown). ${decisionNote} Unrecognized brands excluded: ${unknownDecisionBrands}.`,
             chartConfig: barChart(brandApproval.labels, brandApproval.rates, COLORS.primary, {
                 xLabel: 'Approval %',
                 yLabel: 'Brand (decisions)',
@@ -103,12 +88,14 @@ async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
         }),
         createEntry({
             key: 'turnaround',
-            label: 'Average Turnaround',
-            title: `Average Turnaround (${scopeText})`,
-            description: 'Average hours from submit to decision (by decision month, last 5 months).',
+            label: 'Staff Review Turnaround',
+            title: `Staff Review Turnaround (${scopeText})`,
+            description: `Mean hours to final staff decision, by UTC decision month (current month + previous 4). Staff: ${turnaround.staffCount} samples. AI decisions excluded (${turnaround.aiCount} in this window): their saved timestamps start after analysis and cannot measure AI processing time. Gaps mean no samples. Invalid/future dates and user-left closures excluded (${turnaround.excluded} across all history).`,
             chartConfig: lineChart(
                 turnaround.labels,
-                [{ label: 'Avg Hours', data: turnaround.hours, color: COLORS.primary }],
+                [
+                    { label: 'Staff Avg Hours', data: turnaround.staffHours, color: COLORS.primary },
+                ],
                 { xLabel: 'Month', yLabel: 'Hours' }
             ),
         }),
@@ -116,7 +103,7 @@ async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
             key: 'brands',
             label: 'Top Brands',
             title: `Top Brands (${scopeText})`,
-            description: 'Most common brands by count.',
+            description: `Most common brands. ${garageNote} Unrecognized brands excluded: ${unknownBrands}.`,
             chartConfig: barChart(topBrands.labels, topBrands.counts, COLORS.primary, {
                 xLabel: 'Num of vehicles',
                 yLabel: 'Brand',
@@ -131,7 +118,7 @@ async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
             key: 'brands_low',
             label: 'Least Popular Brands',
             title: `Least Popular Brands (${scopeText})`,
-            description: 'Rarest brands (one single-vehicle brand plus the next few).',
+            description: `Ten least common recorded brands; ties sorted alphabetically. ${garageNote} Unrecognized brands excluded: ${unknownBrands}.`,
             chartConfig: barChart(leastBrands.labels, leastBrands.counts, COLORS.secondary, {
                 xLabel: 'Num of vehicles',
                 yLabel: 'Brand',
@@ -146,7 +133,7 @@ async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
             key: 'vehicles',
             label: 'Most Popular Vehicles',
             title: `Most Popular Vehicles (${scopeText})`,
-            description: 'Top vehicles by count.',
+            description: `Vehicle names grouped by brand/model, ignoring case, spacing and leading/trailing model years; trims remain separate. ${garageNote}`,
             chartConfig: barChart(topVehicles.labels, topVehicles.counts, COLORS.primary, {
                 xLabel: 'Num of vehicles',
                 yLabel: 'Vehicle',
@@ -161,7 +148,7 @@ async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
             key: 'users',
             label: 'Top Users',
             title: `Top Users (${scopeText})`,
-            description: 'Users with the most verified vehicles.',
+            description: `Users with the most garage entries. ${garageNote}`,
             chartConfig: barChart(topUsers.labels, topUsers.counts, COLORS.primary, {
                 xLabel: 'Num of vehicles',
                 yLabel: 'User',
@@ -174,6 +161,14 @@ async function buildStatsEmbeds({ scope, guildId, guildName, client }) {
 
 async function createEntry({ key, label, title, description, chartConfig }) {
     const imageUrl = await chartUrlFromConfig(chartConfig);
+    if (!imageUrl) {
+        const values = chartConfig.data.labels.map((label, index) =>
+            `${label}: ${chartConfig.data.datasets.map(dataset =>
+                `${dataset.label || 'Count'} ${dataset.data[index] == null ? 'n/a' : Number(dataset.data[index].toFixed(2))}`
+            ).join(', ')}`
+        );
+        description += `\n${values.join('\n')}`;
+    }
     return {
         key,
         label,
@@ -184,8 +179,8 @@ async function createEntry({ key, label, title, description, chartConfig }) {
 function buildEmbed({ title, description, imageUrl }) {
     return {
         title,
-        description,
-        image: { url: imageUrl },
+        description: (imageUrl ? description : `${description}\nChart unavailable; try again later.`).slice(0, 4096),
+        ...(imageUrl ? { image: { url: imageUrl } } : {}),
         color: 0xFFFCFF,
         footer: { text: 'Live stats • ThrottleBot Verification' },
     };
@@ -193,378 +188,6 @@ function buildEmbed({ title, description, imageUrl }) {
 
 function scopeLabel(scope, guildName) {
     return scope === 'server' ? guildName : 'Global';
-}
-
-async function verificationsOverTime(matchScope) {
-    const match = { ...matchScope };
-    const data = await verificationSchema.aggregate([
-        { $match: match },
-        {
-            $project: {
-                decision: '$decision',
-                status: '$status',
-                submittedRaw: { $ifNull: ['$submittedOn', '$createdAt'] },
-            },
-        },
-        {
-            $match: {
-                submittedRaw: { $ne: null },
-            },
-        },
-        {
-            $project: {
-                decision: '$decision',
-                status: '$status',
-                submittedDate: {
-                    $cond: [
-                        { $isNumber: '$submittedRaw' },
-                        { $toDate: '$submittedRaw' },
-                        {
-                            $toDate: {
-                                $switch: {
-                                    branches: [
-                                        {
-                                            case: { $regexMatch: { input: { $toString: '$submittedRaw' }, regex: /^\d+$/ } },
-                                            then: { $toLong: '$submittedRaw' },
-                                        },
-                                    ],
-                                    default: '$submittedRaw',
-                                },
-                            },
-                        },
-                    ],
-                },
-            },
-        },
-        {
-            $project: {
-                decision: '$decision',
-                submittedDate: 1,
-                decisionCategory: {
-                    $cond: [
-                        {
-                            $or: [
-                                { $eq: ['$decision', 'approved'] },
-                                { $eq: ['$status', 'auto-approved'] },
-                            ],
-                        },
-                        'approved',
-                        'denied',
-                    ],
-                },
-                year: { $year: '$submittedDate' },
-            },
-        },
-        { $match: { submittedDate: { $ne: null }, decisionCategory: { $in: ['approved', 'denied'] } } },
-        {
-            $group: {
-                _id: { year: '$year', decision: '$decisionCategory' },
-                count: { $sum: 1 },
-            },
-        },
-    ]);
-
-    const yearsPresent = data.map((d) => d._id.year).filter((y) => Number.isFinite(y));
-    const fallbackYear = new Date().getFullYear();
-    const minYear = yearsPresent.length ? Math.min(...yearsPresent) : fallbackYear;
-    const maxYear = yearsPresent.length ? Math.max(...yearsPresent) : fallbackYear;
-    const labels = [];
-    for (let y = minYear; y <= maxYear; y += 1) labels.push(String(y));
-
-    const approved = labels.map((year) =>
-        data.find((d) => String(d._id.year) === year && d._id.decision === 'approved')?.count || 0
-    );
-    const denied = labels.map((year) =>
-        data.find((d) => String(d._id.year) === year && d._id.decision === 'denied')?.count || 0
-    );
-
-    const finalLabels = labels.length ? labels : [String(fallbackYear)];
-    const finalApproved = labels.length ? approved : [0];
-    const finalDenied = labels.length ? denied : [0];
-
-    return { labels: finalLabels, approved: finalApproved, denied: finalDenied };
-}
-
-async function approvalDenialRate(matchScope) {
-    const applications = await verificationSchema.find(matchScope).select('decision status').lean();
-    let approved = 0;
-    let denied = 0;
-
-    applications.forEach((app) => {
-        const bucket = decisionBucket(app.decision, app.status);
-        if (bucket === 'approved') approved += 1;
-        if (bucket === 'denied') denied += 1;
-    });
-
-    return { approved, denied };
-}
-
-async function aiApprovalStats(matchScope) {
-    const applications = await verificationSchema
-        .find(matchScope)
-        .select('decision status decidedBy')
-        .lean();
-
-    let autoApproved = 0;
-    let autoDenied = 0;
-    let overrideToDenied = 0;
-    let overrideToApproved = 0;
-
-    applications.forEach((app) => {
-        if (app.decision === 'overridden-denied') {
-            overrideToDenied += 1;
-            return;
-        }
-        if (app.decision === 'overridden-approved') {
-            overrideToApproved += 1;
-            return;
-        }
-
-        const isAutoApproved =
-            app.status === 'auto-approved' ||
-            app.decision === 'auto-approved' ||
-            (app.decidedBy === 'ai-auto' && app.decision === 'approved');
-        const isAutoDenied =
-            app.status === 'auto-denied' ||
-            app.decision === 'auto-denied' ||
-            (app.decidedBy === 'ai-auto' && app.decision === 'denied');
-
-        if (isAutoApproved) autoApproved += 1;
-        else if (isAutoDenied) autoDenied += 1;
-    });
-
-    return { autoApproved, autoDenied, overrideToDenied, overrideToApproved };
-}
-
-async function averageTurnaround(matchScope) {
-    const cutoff = new Date();
-    cutoff.setMonth(cutoff.getMonth() - 4);
-    cutoff.setDate(1);
-    cutoff.setHours(0, 0, 0, 0);
-
-    // Mirror ETA logic: only consider decided applications with approved/denied decisions
-    const match = {
-        ...matchScope,
-        decidedOn: { $ne: null },
-        decision: { $in: ['approved', 'denied'] },
-    };
-
-    const data = await verificationSchema.aggregate([
-        { $match: match },
-        {
-            $project: {
-                submittedDate: normalizeDateExpr('$submittedOn'),
-                decidedDate: normalizeDateExpr('$decidedOn'),
-            },
-        },
-        {
-            $match: {
-                submittedDate: { $type: 'date' },
-                decidedDate: { $type: 'date' },
-                decidedDate: { $gte: cutoff },
-            },
-        },
-        {
-            $project: {
-                decidedMonth: {
-                    $dateTrunc: {
-                        date: '$decidedDate',
-                        unit: 'month',
-                    },
-                },
-                turnaroundMs: { $subtract: ['$decidedDate', '$submittedDate'] },
-            },
-        },
-        { $match: { turnaroundMs: { $gte: 0 } } },
-        {
-            $group: {
-                _id: '$decidedMonth',
-                avgMs: { $avg: '$turnaroundMs' },
-            },
-        },
-        { $sort: { _id: 1 } },
-    ]);
-
-    const months = [];
-    const start = startOfMonth(new Date());
-    for (let i = 4; i >= 0; i -= 1) {
-        const d = new Date(start);
-        d.setMonth(d.getMonth() - i);
-        months.push(d);
-    }
-
-    const dataMap = new Map(
-        data.map((d) => [
-            new Date(d._id).toISOString().slice(0, 7),
-            Math.max(0, d.avgMs / 1000 / 60 / 60),
-        ])
-    );
-
-    const labels = months.map((d) => d.toISOString().slice(0, 7));
-    const hours = labels.map((label) => dataMap.get(label) || 0);
-
-    return { labels, hours };
-}
-
-async function brandApprovalRates(matchScope) {
-    const applications = await verificationSchema
-        .find(matchScope)
-        .select('vehicle vehicleBrand vehicleModel decision status')
-        .lean();
-
-    const brandStats = new Map();
-
-    for (const app of applications) {
-        const meta = resolveBrandFields({
-            vehicleName: app.vehicle,
-            vehicleBrand: app.vehicleBrand,
-            vehicleModel: app.vehicleModel,
-        });
-        if (!meta.brandKey) continue;
-
-        const bucket = brandStats.get(meta.brandKey) || { label: meta.brand || 'Unknown', approved: 0, total: 0 };
-        const decision = decisionBucket(app.decision, app.status);
-        if (!decision) continue;
-
-        if (decision === 'approved') bucket.approved += 1;
-        bucket.total += 1;
-        if (!bucket.label && meta.brand) bucket.label = meta.brand;
-        brandStats.set(meta.brandKey, bucket);
-    }
-
-    const ranked = Array.from(brandStats.values())
-        .filter((b) => b.total >= 3)
-        .sort((a, b) => {
-            const rateA = a.approved / a.total;
-            const rateB = b.approved / b.total;
-            if (rateA === rateB) return b.total - a.total;
-            return rateB - rateA;
-        })
-        .slice(0, 10);
-
-    return {
-        labels: ranked.map((b) => `${formatLabel(b.label)} (${b.total})`),
-        rates: ranked.map((b) => Math.round((b.approved / b.total) * 100)),
-    };
-}
-
-async function mostCommonBrands(matchScope) {
-    const vehicles = await garageSchema.find(matchScope).select('vehicle vehicleBrand vehicleModel').lean();
-    const brandCounts = new Map();
-
-    for (const vehicle of vehicles) {
-        const meta = resolveBrandFields({
-            vehicleName: vehicle.vehicle,
-            vehicleBrand: vehicle.vehicleBrand,
-            vehicleModel: vehicle.vehicleModel,
-        });
-        if (!meta.brandKey) continue;
-
-        const bucket = brandCounts.get(meta.brandKey) || { label: meta.brand || 'Unknown', count: 0 };
-        if (!bucket.label && meta.brand) bucket.label = meta.brand;
-        bucket.count += 1;
-        brandCounts.set(meta.brandKey, bucket);
-    }
-
-    const sorted = Array.from(brandCounts.values())
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10);
-
-    return {
-        labels: sorted.map((b) => formatLabel(b.label)),
-        counts: sorted.map((b) => b.count),
-    };
-}
-
-async function leastCommonBrands(matchScope) {
-    const vehicles = await garageSchema.find(matchScope).select('vehicle vehicleBrand vehicleModel').lean();
-    const brandCounts = new Map();
-
-    for (const vehicle of vehicles) {
-        const meta = resolveBrandFields({
-            vehicleName: vehicle.vehicle,
-            vehicleBrand: vehicle.vehicleBrand,
-            vehicleModel: vehicle.vehicleModel,
-        });
-        if (!meta.brandKey) continue;
-
-        const bucket = brandCounts.get(meta.brandKey) || { label: meta.brand || 'Unknown', count: 0 };
-        if (!bucket.label && meta.brand) bucket.label = meta.brand;
-        bucket.count += 1;
-        brandCounts.set(meta.brandKey, bucket);
-    }
-
-    const sorted = Array.from(brandCounts.values())
-        .filter((b) => b.count > 0)
-        .sort((a, b) => a.count - b.count || a.label.localeCompare(b.label));
-
-    // Take exactly one single-vehicle brand if present, then the next rare brands with count >= 2
-    const singles = sorted.filter((b) => b.count === 1);
-    const multis = sorted.filter((b) => b.count >= 2);
-
-    const result = [];
-    if (singles.length) {
-        result.push(singles[0]);
-    }
-    result.push(...multis.slice(0, Math.max(0, 10 - result.length)));
-
-    return {
-        labels: result.map((b) => formatLabel(b.label)),
-        counts: result.map((b) => b.count),
-    };
-}
-
-async function mostPopularVehicles(matchScope) {
-    const vehicles = await garageSchema.find(matchScope).select('vehicle vehicleBrand vehicleModel').lean();
-    const counts = new Map();
-
-    for (const v of vehicles) {
-        const raw = typeof v.vehicle === 'string' ? v.vehicle : '';
-        const meta = resolveBrandFields({
-            vehicleName: raw,
-            vehicleBrand: v.vehicleBrand,
-            vehicleModel: v.vehicleModel,
-        });
-
-        const brandPart = meta.brandKey ? meta.brandKey : null;
-        const modelPart = meta.model ? meta.model.toLowerCase().trim() : '';
-        const key = brandPart ? `${brandPart}:${modelPart}` : normalizeVehicleKey(raw);
-        if (!key) continue;
-
-        const label = brandPart
-            ? [formatLabel(meta.brand), meta.model ? formatLabel(meta.model) : null].filter(Boolean).join(' ')
-            : raw || key;
-
-        const existing = counts.get(key) || { count: 0, sample: label };
-        existing.count += 1;
-        counts.set(key, existing);
-    }
-
-    const sorted = Array.from(counts.entries())
-        .map(([key, value]) => ({ key, ...value }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10);
-
-    return {
-        labels: sorted.map((v) => v.sample || v.key),
-        counts: sorted.map((v) => v.count),
-    };
-}
-
-async function topUsersByVehicles(matchScope, client) {
-    const users = await garageSchema.aggregate([
-        { $match: matchScope },
-        { $group: { _id: '$userId', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
-    ]);
-
-    const userIds = users.map((u) => u._id);
-    const labelMap = await resolveUserLabels(userIds, client);
-
-    const labels = users.map((u) => labelMap.get(u._id) || u._id);
-    const counts = users.map((u) => u.count);
-    return { labels, counts };
 }
 
 function lineChart(labels, datasets, options = {}) {
@@ -702,21 +325,6 @@ function pieChart(labels, data, colors) {
     };
 }
 
-function startOfMonth(date) {
-    const d = new Date(date);
-    d.setDate(1);
-    d.setHours(0, 0, 0, 0);
-    return d;
-}
-
-function decisionBucket(decision, status) {
-    const approvedStates = ['approved', 'overridden-approved', 'auto-approved'];
-    const deniedStates = ['denied', 'overridden-denied', 'auto-denied'];
-    if (approvedStates.includes(decision) || approvedStates.includes(status)) return 'approved';
-    if (deniedStates.includes(decision) || deniedStates.includes(status)) return 'denied';
-    return null;
-}
-
 async function resolveUserLabels(userIds, client) {
     const map = new Map();
     if (!Array.isArray(userIds) || userIds.length === 0) return map;
@@ -758,66 +366,8 @@ async function chartUrlFromConfig(config) {
         console.error('QuickChart shorten failed', err.message || err);
     }
 
-    // Fallback: truncate the encoded URL to Discord's limit
-    return directUrl.slice(0, 1900);
-}
-
-function normalizeVehicleKey(vehicle = '') {
-    if (!vehicle || typeof vehicle !== 'string') return null;
-    const cleaned = vehicle.replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
-    if (!cleaned) return null;
-    let tokens = cleaned.split(' ');
-
-    // Remove leading year/number tokens
-    while (tokens.length && (/^\d{2,4}$/.test(tokens[0]) || /^\d+$/.test(tokens[0]))) {
-        tokens.shift();
-    }
-
-    if (!tokens.length) return cleaned;
-
-    // Drop brand prefixes (handles multi-word brands)
-    for (let i = Math.min(3, tokens.length); i >= 1; i -= 1) {
-        const candidate = tokens.slice(0, i).join(' ');
-        if (VEHICLE_BRAND_PREFIXES.has(candidate)) {
-            tokens = tokens.slice(i);
-            break;
-        }
-    }
-
-    if (!tokens.length) return cleaned;
-
-    return tokens.join(' ');
-}
-
-function formatLabel(text) {
-    if (!text || typeof text !== 'string') return '';
-    return text
-        .split(' ')
-        .filter(Boolean)
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' ');
+    // A truncated URL is invalid JSON. Keep the stats usable without an image.
+    return null;
 }
 
 module.exports = { buildStatsEmbeds };
-
-function normalizeDateExpr(field) {
-    return {
-        $cond: [
-            { $isNumber: field },
-            { $toDate: field },
-            {
-                $toDate: {
-                    $switch: {
-                        branches: [
-                            {
-                                case: { $regexMatch: { input: { $toString: field }, regex: /^\d+$/ } },
-                                then: { $toLong: field },
-                            },
-                        ],
-                        default: field,
-                    },
-                },
-            },
-        ],
-    };
-}

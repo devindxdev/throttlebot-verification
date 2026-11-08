@@ -9,7 +9,8 @@
     "dev": "nodemon index.js",
     "backfill:brands": "node scripts/backfillBrands.js",
     "enrich:brands:ai": "node scripts/enrichBrandsOpenAI.js",
-    "heroku-postbuild": "cd throttlebot-site && npm install --include=dev && npm run build"
+    "heroku-postbuild": "cd throttlebot-site && npm install --include=dev && npm run build",
+    "maintenance:verification": "node scripts/verificationMaintenance.js"
   },
   "repository": {
     "type": "git",

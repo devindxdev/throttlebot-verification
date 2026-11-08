@@ -15,10 +15,12 @@ function sumGuildMembers(client) {
 }
 
 async function buildStatusPayload(client) {
-    const isReady = Boolean(client?.isReady?.());
+    const isReady = Boolean(client?.isReady?.()) && client?.databaseReady !== false;
     const now = new Date();
     const payload = {
         status: isReady ? 'ok' : 'starting',
+        verificationReady: client?.databaseReady === true,
+        verificationPolicyVersion: 1,
         updatedAt: now.toISOString(),
         guilds: isReady ? client.guilds.cache.size : 0,
         users: isReady ? sumGuildMembers(client) : 0,
@@ -82,4 +84,4 @@ function startStatusServer(client) {
     });
 }
 
-module.exports = { startStatusServer };
+module.exports = { startStatusServer, buildStatusPayload };
