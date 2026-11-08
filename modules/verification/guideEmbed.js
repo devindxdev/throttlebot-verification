@@ -9,7 +9,7 @@ function buildVideoGuide(guildName, { uploadOption = 'media' } = {}) {
                 name: 'Record Your Verification Video',
                 value:
                     '1. Record a short, clear video showing your vehicle and its keys.\n' +
-                    `2. Say **${guildName}** and your **Discord username** out loud — not your display name or server nickname.\n` +
+                    `2. Say **${guildName}** and your **Discord username** out loud (we need your username).\n` +
                     '3. Clearly show yourself starting the vehicle with your keys in the video.',
             },
             {

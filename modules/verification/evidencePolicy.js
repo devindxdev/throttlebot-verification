@@ -1,3 +1,5 @@
+const { escapeMarkdown } = require('discord.js');
+
 function attachmentKind(attachment) {
     const mime = typeof attachment?.contentType === 'string'
         ? attachment.contentType.toLowerCase().split(';', 1)[0].trim() : '';
@@ -10,9 +12,19 @@ function videoGuidance(guildProfile, { guildName, username } = {}) {
     if (!guildProfile.videoVerificationRequired) {
         return `Make sure your video clearly shows your vehicle and meets the requirements in <#${guildProfile.guideChannelId}>. Server staff will review your video.`;
     }
-    const server = guildName ? `**${guildName}**` : 'this server’s name';
-    const user = username ? `**${username}** (your Discord username)` : 'your Discord username';
-    return `Record a short, original, unedited video. Say ${server} and ${user} out loud, then clearly show yourself starting the vehicle with your keys. Keep the vehicle, keys and start visible, and your voice audible. Read <#${guildProfile.guideChannelId}> and watch the example before submitting. Staff will review your video.`;
+    const server = guildName ? `**${escapeMarkdown(guildName)}**` : 'this server’s name';
+    const user = username ? `**${escapeMarkdown(username)}** (your Discord username)` : 'your Discord username';
+    return [
+        'Record a short, original, unedited video:',
+        '',
+        `• Say ${server} out loud.`,
+        `• Say ${user} out loud.`,
+        '• Clearly show yourself **starting the vehicle with your keys**.',
+        '• Keep the vehicle, keys and start visible, with clear audio.',
+        '',
+        `Read <#${guildProfile.guideChannelId}> and watch the example before submitting.`,
+        'Staff will review your video.',
+    ].join('\n');
 }
 
 function submissionErrorMessage(error, { video = false } = {}) {

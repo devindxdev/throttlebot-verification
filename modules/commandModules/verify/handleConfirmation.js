@@ -44,7 +44,7 @@ module.exports = async (interaction, vehicleName, vehicleAttachment, guildProfil
             confirmationEmbed.addFields({ name: 'Video verification', value: videoGuidance(guildProfile, { guildName: interaction.guild.name, username: interaction.user.username }) });
         }
         if (kind === 'video') {
-            confirmationEmbed.addFields({ name: 'Uploaded evidence', value: `[View your video](${vehicleAttachment.url})` });
+            confirmationEmbed.addFields({ name: 'Your video', value: `[View your video](${vehicleAttachment.url})` });
         }
         if (kind === 'image') {
             confirmationEmbed.setImage(vehicleAttachment.url); // Display the uploaded vehicle image
