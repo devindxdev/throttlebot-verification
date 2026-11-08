@@ -170,11 +170,11 @@ test('video guide requires video for all values and removes the photo example', 
     assert.match(text, /out loud/);
     assert.match(text, /starting the vehicle with your keys/);
     assert.match(text, /The Car Community/);
-    assert.match(text, /`image` upload field/);
+    assert.match(text, /`media` upload field/);
     assert.match(text, /original, unedited video/);
     assert.deepEqual(buildVerificationGuide({ videoVerificationRequired: true }, 'The Car Community').toJSON(), guide);
     const tcc = buildVerificationGuide({ guildId: TCC_GUILD_ID, videoVerificationRequired: true }, 'The Car Community').toJSON();
-    assert.match(tcc.fields.map(field => field.value).join('\n'), /`video` upload field/);
+    assert.match(tcc.fields.map(field => field.value).join('\n'), /`media` upload field/);
     assert.ok(buildVerificationGuide({ videoVerificationRequired: false }, 'Other Server').toJSON().image);
     assert.ok(JSON.stringify(guide).length < 6000);
 });
@@ -264,17 +264,14 @@ test('video upload failures give actionable compression guidance and preserve po
     assert.equal(submissionErrorMessage({ code: 'VIDEO_REQUIRED', message: 'Video required here' }), 'Video required here');
 });
 
-test('TCC slash-command definition names the upload video while the global command stays compatible', () => {
+test('one shared verify command uses a neutral media attachment field', () => {
     const { buildVerifyCommand } = require('../modules/verification/verifyCommand');
-    const tcc = buildVerifyCommand({ videoOnly: true }).toJSON();
-    const global = buildVerifyCommand().toJSON();
-    assert.equal(tcc.options.find(option => option.type === 11).name, 'video');
-    assert.equal(global.options.find(option => option.type === 11).name, 'image');
-    assert.match(tcc.description, /video/);
-    assert.match(tcc.options.find(option => option.type === 11).description, /vehicle starting with your keys/);
+    const command = buildVerifyCommand().toJSON();
+    assert.equal(command.options.find(option => option.type === 11).name, 'media');
+    assert.match(command.options.find(option => option.type === 11).description, /if your server allows it/);
 });
 
-test('verify handler accepts both video and legacy image upload options during rollout', async () => {
+test('verify handler accepts media and both legacy upload options during rollout', async () => {
     const paths = ['validateInput', 'handlePreApproval', 'handleConfirmation', 'submitApplication'];
     const previous = new Map();
     const handlers = new Map();
@@ -288,7 +285,7 @@ test('verify handler accepts both video and legacy image upload options during r
             require.cache[id] = { id, filename: id, loaded: true, exports: handler };
         }
         const command = reload('../commands/verify');
-        for (const option of ['video', 'image']) {
+        for (const option of ['media', 'video', 'image']) {
             const interaction = interactionFixture();
             interaction.deferReply = async () => { interaction.deferred = true; };
             interaction.options = { getString: () => 'Honda Civic', getAttachment: name => name === option ? video : null };
@@ -296,7 +293,7 @@ test('verify handler accepts both video and legacy image upload options during r
             assert.equal(handlers.get('submitApplication').mock.calls.at(-1).arguments[2], video);
             assert.equal(handlers.get('handlePreApproval').mock.calls.at(-1).arguments[3], video);
         }
-        assert.equal(handlers.get('submitApplication').mock.callCount(), 2);
+        assert.equal(handlers.get('submitApplication').mock.callCount(), 3);
         handlers.get('submitApplication').mock.mockImplementation(async () => { throw Object.assign(new Error('too large'), { code: 40005 }); });
         mock.method(console, 'error', () => {});
         const failed = interactionFixture();

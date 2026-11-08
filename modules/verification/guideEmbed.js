@@ -1,6 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 
-function buildVideoGuide(guildName, { uploadOption = 'image' } = {}) {
+function buildVideoGuide(guildName, { uploadOption = 'media' } = {}) {
     return new EmbedBuilder()
         .setTitle('How To Verify — Video Required')
         .setDescription(`All new vehicle verifications in ${guildName} require a video, regardless of vehicle value. Photos alone are no longer accepted.`)
@@ -38,7 +38,7 @@ function buildVideoGuide(guildName, { uploadOption = 'image' } = {}) {
 
 function buildVerificationGuide(guildProfile, guildName) {
     if (guildProfile.videoVerificationRequired) {
-        return buildVideoGuide(guildName, { uploadOption: guildProfile.guildId === '438650836512669699' ? 'video' : 'image' });
+        return buildVideoGuide(guildName);
     }
     return new EmbedBuilder()
         .setTitle('How to Verify Your Vehicle')

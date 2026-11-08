@@ -13,7 +13,7 @@ module.exports = {
 
             // Extract vehicle and user details
             const vehicleName = interaction.options.getString('vehicle');
-            const vehicleAttachment = interaction.options.getAttachment('video') || interaction.options.getAttachment('image');
+            const vehicleAttachment = interaction.options.getAttachment('media') || interaction.options.getAttachment('video') || interaction.options.getAttachment('image');
             videoSubmission = attachmentKind(vehicleAttachment) === 'video';
             const initiatorId = interaction.user.id;
             const initiatorAvatar = interaction.user.displayAvatarURL({ dynamic: true });

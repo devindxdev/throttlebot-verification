@@ -59,5 +59,5 @@ test('status distinguishes Discord login from completed verification initializat
     const ready = await buildStatusPayload(client);
     assert.equal(ready.status, 'ok');
     assert.equal(ready.verificationReady, true);
-    assert.equal(ready.verificationPolicyVersion, 1);
+    assert.equal(ready.verificationPolicyVersion, 2);
 });

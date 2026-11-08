@@ -20,7 +20,7 @@ async function buildStatusPayload(client) {
     const payload = {
         status: isReady ? 'ok' : 'starting',
         verificationReady: client?.databaseReady === true,
-        verificationPolicyVersion: 1,
+        verificationPolicyVersion: 2,
         updatedAt: now.toISOString(),
         guilds: isReady ? client.guilds.cache.size : 0,
         users: isReady ? sumGuildMembers(client) : 0,
