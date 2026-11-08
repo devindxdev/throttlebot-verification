@@ -2,10 +2,11 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 const { commitDecision } = require('../verification/decisions');
 const verificationSchema = require('../../mongodb_schema/verificationApplicationSchema.js');
 const { obtainGuildProfile } = require('../database.js');
+const { buildGuideRejectionMessage } = require('../verification/guideRejection');
 const { errorEmbed } = require('../utility.js');
 
 /**
- * Handles the "Read The Guide" denial path, closing the application and nudging the applicant to review requirements.
+ * Rejects an application and DMs a complete copy of the verification guide.
  */
 module.exports = async function handleGuideDenial(interaction) {
     try {
@@ -32,16 +33,16 @@ module.exports = async function handleGuideDenial(interaction) {
 
         await commitDecision(application, {
             status: 'closed', decision: 'denied-read-guide', decidedBy: moderatorId, decidedOn: new Date(),
-            denialReason: 'Please read the verification guide and resubmit.',
+            denialReason: 'Submission did not meet the verification requirements. Please read the guide and resubmit.',
         });
 
-        const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0]).setColor('#FFB347'); // orange tone
+        const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0]).setColor('#FF6961');
         const fields = updatedEmbed.data.fields || [];
         const statusField = fields.find((f) => f.name.toLowerCase().includes('status'));
         if (statusField) {
-            statusField.value = 'Denied - Read The Guide';
+            statusField.value = 'Rejected - Read The Guide';
         } else {
-            updatedEmbed.addFields({ name: 'Status', value: 'Denied - Read The Guide' });
+            updatedEmbed.addFields({ name: 'Status', value: 'Rejected - Read The Guide' });
         }
         updatedEmbed.addFields({ name: 'Decided By', value: `${moderatorTag} | <@${moderatorId}>` });
         updatedEmbed.setFooter({ text: footerText, iconURL: footerIcon });
@@ -49,29 +50,28 @@ module.exports = async function handleGuideDenial(interaction) {
         const disabledRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('guideDenied')
-                .setLabel('Guide Sent')
+                .setLabel('Rejected - Read Guide')
                 .setStyle(ButtonStyle.Secondary)
                 .setDisabled(true)
         );
 
-        await interaction.editReply({ embeds: [updatedEmbed], components: [disabledRow] });
+        let cardUpdated = true;
+        try {
+            await interaction.editReply({ embeds: [updatedEmbed], components: [disabledRow] });
+        } catch (error) {
+            cardUpdated = false;
+            console.warn('Application rejected, but the review message could not be updated:', error.name);
+        }
 
-        // DM applicant with guidance
+        let guideDelivered = false;
         try {
             const applicant = await interaction.client.users.fetch(application.userId);
-            const dmEmbed = new EmbedBuilder()
-                .setAuthor({ name: 'Verification Needs Updates', iconURL: footerIcon })
-                .setDescription(
-                    `Your verification application for **${application.vehicle}** was closed. Please review the requirements in <#${guildProfile.guideChannelId}> and re-submit once ready.`
-                )
-                .setColor('#FFB347')
-                .setFooter({ text: footerText, iconURL: footerIcon });
-            await applicant.send({ embeds: [dmEmbed] });
-        } catch {
-            await interaction.followUp({
-                embeds: [errorEmbed('Could not notify the user via DM.', interaction.user.displayAvatarURL({ dynamic: true }))],
-                ephemeral: true,
-            });
+            await applicant.send(buildGuideRejectionMessage({
+                application, guildProfile, guildName: interaction.guild.name, footerIcon,
+            }));
+            guideDelivered = true;
+        } catch (error) {
+            console.warn('Application rejected, but the guide DM could not be delivered:', error.name);
         }
 
         if (guildProfile.loggingChannelId) {
@@ -81,7 +81,7 @@ module.exports = async function handleGuideDenial(interaction) {
                     channel.send({
                         embeds: [
                             EmbedBuilder.from(updatedEmbed).setDescription(
-                                `Application closed with "Read The Guide" in <#${guildProfile.verificationChannelId}>.`
+                                `Application rejected with "Read The Guide" in <#${guildProfile.verificationChannelId}>.`
                             ),
                         ],
                     })
@@ -90,7 +90,10 @@ module.exports = async function handleGuideDenial(interaction) {
         }
 
         await interaction.followUp({
-            content: `Requested **${application.vehicle}** applicant to read the guide.`,
+            content: `Verification for **${application.vehicle}** rejected. ` +
+                (guideDelivered ? 'A copy of the guide was sent to the applicant by DM.' :
+                    `The guide could not be delivered by DM. Ask the applicant to enable DMs or read <#${guildProfile.guideChannelId}>.`) +
+                (cardUpdated ? '' : ' The review message could not be updated.'),
             ephemeral: true,
         });
     } catch (error) {
